@@ -42,18 +42,32 @@ function setAuthCookies(
 async function refreshAccessToken(
   refreshToken: string,
 ): Promise<{ access_token: string; refresh_token: string } | null> {
-  const refreshResponse = await fetch(`${API_URL}/api/v1/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
+  try {
+    const refreshResponse = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
 
-  if (!refreshResponse.ok) return null;
+    if (!refreshResponse.ok) return null;
 
-  return refreshResponse.json() as Promise<{
-    access_token: string;
-    refresh_token: string;
-  }>;
+    return refreshResponse.json() as Promise<{
+      access_token: string;
+      refresh_token: string;
+    }>;
+  } catch {
+    return null;
+  }
+}
+
+function backendUnavailableResponse() {
+  return NextResponse.json(
+    {
+      message:
+        "API is unreachable. Start the backend with .\\scripts\\start-api.ps1 (http://localhost:8000).",
+    },
+    { status: 503 },
+  );
 }
 
 async function proxyRequest(
@@ -101,7 +115,12 @@ async function proxyRequest(
       : await request.text();
   }
 
-  const backendResponse = await fetch(targetUrl, init);
+  let backendResponse: Response;
+  try {
+    backendResponse = await fetch(targetUrl, init);
+  } catch {
+    return backendUnavailableResponse();
+  }
   const backendContentType =
     backendResponse.headers.get("Content-Type") ?? "application/json";
   const isBinary =
