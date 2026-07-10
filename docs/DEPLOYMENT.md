@@ -1,136 +1,163 @@
-# Deployment Guide
+# Deployment Guide (Free Tier)
 
-PlacementOS uses a split deployment model with managed cloud services. No container orchestration is required in the repository.
+PlacementOS deploys on **free** managed services. No Railway required.
 
 ## Architecture
 
-| Component    | Platform                             | Notes                      |
-| ------------ | ------------------------------------ | -------------------------- |
-| Frontend     | [Vercel](https://vercel.com)         | Next.js 15 App Router      |
-| Backend      | [Railway](https://railway.app)       | FastAPI + Uvicorn          |
-| Database     | [Neon](https://neon.tech)            | Serverless PostgreSQL      |
-| File storage | [Cloudinary](https://cloudinary.com) | Resumes, documents, assets |
+| Component    | Platform                             | Free tier notes                                  |
+| ------------ | ------------------------------------ | ------------------------------------------------ |
+| Frontend     | [Vercel](https://vercel.com)         | Hobby plan — free for personal projects          |
+| Backend      | [Render](https://render.com)         | Free web service (spins down after ~15 min idle) |
+| Database     | [Neon](https://neon.tech)            | Free Postgres (compute suspends when idle)       |
+| File storage | [Cloudinary](https://cloudinary.com) | Free plan for resumes / documents                |
+
+**Cold starts:** Render free dynos sleep when idle. The first API request after sleep can take 30–60s. Neon may also wake slowly. Fine for demos; not ideal for a live placement day without upgrading.
+
+**Alternatives (also free-ish):** [Koyeb](https://www.koyeb.com), [Fly.io](https://fly.io) (limited free allowance), [Google Cloud Run](https://cloud.google.com/run) (always-free quota).
 
 ---
 
-## Frontend — Vercel
+## 1. Database — Neon (free)
 
-### Setup
+1. Sign up at [neon.tech](https://neon.tech) → create a project.
+2. Copy the connection string (prefer the **pooled** URL if Neon shows one).
+3. You will set this as `DATABASE_URL` on Render.
 
-1. Import the GitHub repository into Vercel.
-2. Set **Root Directory** to `apps/web` (or deploy from monorepo root with appropriate build settings).
-3. Configure build command: `npm run build --workspace=@placementos/web` (from repo root) or `npm run build` (from `apps/web`).
-4. Set output directory to `.next` (default for Next.js).
+Run migrations once the API env is ready (from your machine or Render shell):
 
-### Environment variables
+```bash
+cd apps/api
+# set DATABASE_URL to the Neon URL
+alembic upgrade head
+```
 
-| Variable              | Value                                                         |
-| --------------------- | ------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL` | Your Railway API URL (e.g. `https://your-api.up.railway.app`) |
-
-### Notes
-
-- The Next.js BFF proxy at `/api/v1/*` forwards requests to the backend using `NEXT_PUBLIC_API_URL` as fallback.
-- Enable production domain and HTTPS (automatic on Vercel).
-- Configure OAuth redirect URLs in Google Cloud Console for your Vercel domain if using direct frontend auth flows.
+Or let the Render start command run migrations (see below).
 
 ---
 
-## Backend — Railway
+## 2. Backend — Render (free)
 
-### Setup
+### Option A — Blueprint (recommended)
 
-1. Create a new Railway project and connect the GitHub repository.
-2. Set **Root Directory** to `apps/api`.
-3. Railway detects Python via Nixpacks; `railway.toml` defines the start command.
-4. Add environment variables (see below).
+1. Go to [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**.
+2. Connect [Itzraj786iul/Placementops](https://github.com/Itzraj786iul/Placementops).
+3. Render reads `render.yaml` at the repo root.
+4. Fill in the env vars listed in the Blueprint (especially `DATABASE_URL`, `JWT_SECRET_KEY`).
 
-### Environment variables
+### Option B — Manual Web Service
 
-| Variable                | Description                                            |
-| ----------------------- | ------------------------------------------------------ |
-| `DATABASE_URL`          | Neon PostgreSQL connection string                      |
-| `JWT_SECRET_KEY`        | Long random secret for JWT signing                     |
-| `GOOGLE_CLIENT_ID`      | Google OAuth client ID                                 |
-| `GOOGLE_CLIENT_SECRET`  | Google OAuth client secret                             |
-| `GOOGLE_REDIRECT_URI`   | `https://<railway-domain>/api/v1/auth/google/callback` |
-| `FRONTEND_URL`          | Vercel production URL                                  |
-| `CORS_ORIGINS`          | Vercel production URL (comma-separated if multiple)    |
-| `COOKIE_SECURE`         | `true` in production                                   |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name                                  |
-| `CLOUDINARY_API_KEY`    | Cloudinary API key                                     |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret                                  |
+1. **New** → **Web Service** → connect the GitHub repo.
+2. Settings:
+   - **Root Directory:** `apps/api`
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - **Instance type:** Free
+3. Health check path: `/health`
 
-### Deploy steps
+### Environment variables (Render)
 
-1. Push to `main` — Railway auto-deploys on connected branch.
-2. Run migrations after first deploy:
-   ```bash
-   railway run alembic upgrade head
-   ```
-   Or use Railway shell / one-off command from the dashboard.
+| Variable                | Value / notes                                                            |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `DATABASE_URL`          | Neon connection string                                                   |
+| `JWT_SECRET_KEY`        | Long random secret (never use the code default)                          |
+| `COOKIE_SECURE`         | `true`                                                                   |
+| `ENABLE_DEV_LOGIN`      | `false` for real prod; `true` only for demos                             |
+| `FRONTEND_URL`          | Your Vercel URL, e.g. `https://placementops.vercel.app`                  |
+| `CORS_ORIGINS`          | Same as `FRONTEND_URL`                                                   |
+| `GOOGLE_CLIENT_ID`      | Google OAuth client ID (if using Google login)                           |
+| `GOOGLE_CLIENT_SECRET`  | Google OAuth secret                                                      |
+| `GOOGLE_REDIRECT_URI`   | `https://<your-render-service>.onrender.com/api/v1/auth/google/callback` |
+| `CLOUDINARY_CLOUD_NAME` | Optional until uploads are enabled                                       |
+| `CLOUDINARY_API_KEY`    | Optional                                                                 |
+| `CLOUDINARY_API_SECRET` | Optional                                                                 |
 
-### Health check
-
-Railway uses `/health` (defined in `railway.toml`).
-
----
-
-## Database — Neon PostgreSQL
-
-1. Create a Neon project and database.
-2. Copy the connection string (use pooled connection for serverless if recommended).
-3. Set `DATABASE_URL` on Railway to the Neon connection string.
-4. Run Alembic migrations against Neon before or immediately after first API deploy:
-   ```bash
-   cd apps/api
-   alembic upgrade head
-   ```
+After deploy, open: `https://<service>.onrender.com/health` → should return `{"status":"ok"}`.
 
 ---
 
-## File Storage — Cloudinary
+## 3. Frontend — Vercel (free)
 
-1. Create a Cloudinary account and cloud.
-2. Add `CLOUDINARY_*` variables to Railway (and local `apps/api/.env` when testing uploads).
-3. File upload features will consume these credentials when the storage integration is enabled.
+1. [vercel.com](https://vercel.com) → **Add New Project** → import `Placementops`.
+2. Configure:
+   - **Root Directory:** `apps/web`
+   - **Framework Preset:** Next.js
+   - **Build Command:** `npm run build` (from `apps/web`)  
+     or from monorepo root: `cd ../.. && npm install && npm run build --workspace=@placementos/web`
+3. Environment variables:
+
+| Variable                       | Value                                           |
+| ------------------------------ | ----------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`          | `https://<your-render-service>.onrender.com`    |
+| `INTERNAL_API_URL`             | Same Render URL (used by the Next.js BFF proxy) |
+| `NEXT_PUBLIC_ENABLE_DEV_LOGIN` | Leave **unset** / `false` in production         |
+
+4. Deploy. Note your Vercel URL, then go back to Render and set `FRONTEND_URL` + `CORS_ORIGINS` to that URL. Redeploy the API if needed.
+
+### Monorepo tip
+
+If the Vercel build fails resolving `@placementos/types`, set Root Directory to the **repo root** and:
+
+- Build Command: `npm install && npm run build --workspace=@placementos/web`
+- Output: Next.js default for `apps/web` (or set “Root Directory” back to `apps/web` after installing from root — Vercel’s monorepo docs also support `apps/web` with install from root via project settings).
+
+Simplest path that usually works:
+
+- Root Directory: `apps/web`
+- Install Command: `cd ../.. && npm install`
+- Build Command: `cd ../.. && npm run build --workspace=@placementos/web`
 
 ---
 
-## Google OAuth (production)
+## 4. File Storage — Cloudinary (free)
 
-Update authorized redirect URIs in Google Cloud Console:
+1. Create a free Cloudinary account.
+2. Add `CLOUDINARY_*` on Render when you enable uploads.
 
-- `https://<railway-api-domain>/api/v1/auth/google/callback`
+---
 
-Update authorized JavaScript origins if needed:
+## 5. Google OAuth (optional)
 
-- `https://<vercel-domain>`
+In Google Cloud Console → Credentials:
 
-Set on Railway:
+- Authorized redirect URI:  
+  `https://<render-api>.onrender.com/api/v1/auth/google/callback`
+- Authorized JavaScript origins:  
+  `https://<your-app>.vercel.app`
 
-- `GOOGLE_REDIRECT_URI=https://<railway-api-domain>/api/v1/auth/google/callback`
-- `FRONTEND_URL=https://<vercel-domain>`
+---
+
+## 6. Suggested order
+
+1. Create **Neon** DB → copy `DATABASE_URL`
+2. Deploy **Render** API with env vars → confirm `/health`
+3. Deploy **Vercel** web with `NEXT_PUBLIC_API_URL` / `INTERNAL_API_URL`
+4. Point Render `FRONTEND_URL` + `CORS_ORIGINS` at Vercel
+5. (Optional) Google OAuth + Cloudinary
 
 ---
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR:
-
-- Install dependencies
-- Lint & typecheck
-- Build frontend
-- Verify API imports
-- Run backend tests (native PostgreSQL on runner)
-- Health check against local API
-
-No container builds are performed in CI.
+GitHub Actions (`.github/workflows/ci.yml`) still runs lint, typecheck, build, and API tests on push/PR. Hosting deploys are triggered by Vercel/Render when they are connected to `main`.
 
 ---
 
 ## Rollback
 
-- **Vercel:** Redeploy a previous deployment from the Vercel dashboard.
-- **Railway:** Roll back to a previous deployment in Railway service history.
-- **Neon:** Use Neon branching / point-in-time recovery for database rollback if enabled.
+- **Vercel:** Redeploy a previous deployment from the dashboard.
+- **Render:** Redeploy a previous deploy from service history.
+- **Neon:** Use branching / PITR if enabled on your plan.
+
+---
+
+## Cost reality check
+
+| Service    | Free? | Main limit                        |
+| ---------- | ----- | --------------------------------- |
+| Vercel     | Yes   | Bandwidth / build minutes         |
+| Render     | Yes   | Sleeps when idle; slow cold start |
+| Neon       | Yes   | Storage + compute hours; suspends |
+| Cloudinary | Yes   | Transformations / storage quota   |
+
+For a college demo or small pilot this stack is enough. For a live placement week, upgrade Render (always-on) and Neon compute so the API does not sleep mid-session.

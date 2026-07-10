@@ -230,14 +230,14 @@ PlacementOS uses Google OAuth restricted to `@nitrr.ac.in` institutional emails.
 
 ## Deployment
 
-Production deployment uses:
+Free-tier production stack:
 
-- **Frontend:** Vercel
-- **Backend:** Railway
-- **Database:** Neon PostgreSQL
-- **File storage:** Cloudinary
+- **Frontend:** Vercel (Hobby)
+- **Backend:** Render (free web service)
+- **Database:** Neon PostgreSQL (free)
+- **File storage:** Cloudinary (free)
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for full deployment instructions.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for step-by-step hosting (no Railway required).
 
 ## Troubleshooting
 
