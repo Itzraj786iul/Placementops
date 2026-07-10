@@ -13,6 +13,8 @@ PlacementOS deploys on **free** managed services. No Railway required.
 
 **Cold starts:** Render free dynos sleep when idle. The first API request after sleep can take 30–60s. Neon may also wake slowly. Fine for demos; not ideal for a live placement day without upgrading.
 
+**Python version:** The API is pinned to **Python 3.12** (`render.yaml` + `apps/api/.python-version`). Do not use 3.14 on Render — packages like `pydantic-core` / `psycopg2` will compile from source and the build can hang or fail.
+
 **Alternatives (also free-ish):** [Koyeb](https://www.koyeb.com), [Fly.io](https://fly.io) (limited free allowance), [Google Cloud Run](https://cloud.google.com/run) (always-free quota).
 
 ---
