@@ -40,6 +40,14 @@ class Settings(BaseSettings):
 
     ENABLE_DEV_LOGIN: bool = False
 
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "PlacementOS <onboarding@resend.dev>"
+    EMAIL_PROVIDER: str = "resend"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [
@@ -47,6 +55,24 @@ class Settings(BaseSettings):
             for origin in self.CORS_ORIGINS.split(",")
             if origin.strip()
         ]
+
+    @property
+    def cloudinary_configured(self) -> bool:
+        return bool(
+            self.CLOUDINARY_CLOUD_NAME.strip()
+            and self.CLOUDINARY_API_KEY.strip()
+            and self.CLOUDINARY_API_SECRET.strip()
+            and "your-cloud" not in self.CLOUDINARY_CLOUD_NAME
+            and "your-api" not in self.CLOUDINARY_API_KEY
+        )
+
+    @property
+    def email_configured(self) -> bool:
+        return bool(
+            self.RESEND_API_KEY.strip()
+            and self.EMAIL_FROM.strip()
+            and "your-resend" not in self.RESEND_API_KEY.lower()
+        )
 
 
 settings = Settings()

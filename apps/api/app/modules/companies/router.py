@@ -1,9 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 
 from app.modules.companies.dependencies import get_company_service
-from app.modules.companies.enums import CompanyStatus
+from app.modules.companies.enums import CompanyDocumentType, CompanyStatus
 from app.modules.companies.schemas import (
     CommunicationCreate,
     CommunicationResponse,
@@ -22,6 +22,8 @@ from app.modules.companies.schemas import (
 from app.modules.companies.service import CompanyService
 from app.modules.users.models import User
 from app.platform.auth.dependencies import get_current_user
+from app.platform.storage.types import UploadCategory
+from app.platform.storage.upload_io import read_upload_capped
 
 companies_router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -138,3 +140,29 @@ def add_document(
     service: CompanyService = Depends(get_company_service),
 ) -> DocumentResponse:
     return service.add_document(current_user, company_id, payload)
+
+
+@companies_router.post(
+    "/{company_id}/documents/upload",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_document(
+    company_id: uuid.UUID,
+    file: UploadFile = File(...),
+    document_type: CompanyDocumentType = Form(...),
+    current_user: User = Depends(get_current_user),
+    service: CompanyService = Depends(get_company_service),
+) -> DocumentResponse:
+    filename, content, content_type = await read_upload_capped(
+        file,
+        UploadCategory.DOCUMENT,
+    )
+    return service.upload_document(
+        current_user,
+        company_id,
+        filename=filename,
+        content=content,
+        content_type=content_type,
+        document_type=document_type,
+    )

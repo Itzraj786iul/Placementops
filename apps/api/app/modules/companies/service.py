@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.modules.companies.access import ensure_staff_access
-from app.modules.companies.enums import CompanyStatus, PipelineStage
+from app.modules.companies.enums import CompanyDocumentType, CompanyStatus, PipelineStage
 from app.modules.companies.exceptions import (
     CompanyConflictError,
     CompanyNotFoundError,
@@ -39,6 +39,9 @@ from app.modules.audit.enums import AuditAction, AuditEntityType
 from app.modules.audit.recorder import record_audit
 from app.modules.audit.serialize import snapshot_fields
 from app.modules.users.models import User
+from app.platform.storage.cloudinary_service import CloudinaryService
+from app.platform.storage.dependencies import get_cloudinary_service
+from app.platform.storage.types import UploadCategory
 from app.utils.datetime import utc_now
 
 _COMPANY_AUDIT_FIELDS = [
@@ -53,9 +56,10 @@ _COMPANY_AUDIT_FIELDS = [
 
 
 class CompanyService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, storage: CloudinaryService | None = None) -> None:
         self.db = db
         self.repository = CompanyRepository(db)
+        self.storage = storage or get_cloudinary_service()
 
     def list_companies(
         self,
@@ -267,6 +271,35 @@ class CompanyService:
             company_id=company_id,
             document_type=payload.document_type,
             file_url=payload.file_url,
+            uploaded_by=user.id,
+        )
+        self.repository.save_document(document)
+        self.db.commit()
+        return DocumentResponse.model_validate(document)
+
+    def upload_document(
+        self,
+        user: User,
+        company_id: uuid.UUID,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str | None,
+        document_type: CompanyDocumentType,
+    ) -> DocumentResponse:
+        ensure_staff_access(user)
+        self._get_company_or_raise(company_id)
+        stored = self.storage.upload(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+            category=UploadCategory.DOCUMENT,
+            folder=f"placementos/companies/{company_id}/documents",
+        )
+        document = CompanyDocument(
+            company_id=company_id,
+            document_type=document_type,
+            file_url=stored.url[:500],
             uploaded_by=user.id,
         )
         self.repository.save_document(document)

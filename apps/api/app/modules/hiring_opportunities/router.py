@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 
 from app.modules.applications.dependencies import get_application_service
 from app.modules.applications.schemas import (
@@ -10,7 +10,10 @@ from app.modules.applications.schemas import (
 )
 from app.modules.applications.service import ApplicationService
 from app.modules.hiring_opportunities.dependencies import get_hiring_opportunity_service
-from app.modules.hiring_opportunities.enums import OpportunityStatus
+from app.modules.hiring_opportunities.enums import (
+    OpportunityDocumentType,
+    OpportunityStatus,
+)
 from app.modules.hiring_opportunities.schemas import (
     EligibilityRuleResponse,
     EligibilityRuleUpdate,
@@ -26,6 +29,8 @@ from app.modules.hiring_opportunities.schemas import (
 from app.modules.hiring_opportunities.service import HiringOpportunityService
 from app.modules.users.models import User
 from app.platform.auth.dependencies import get_current_user
+from app.platform.storage.types import UploadCategory
+from app.platform.storage.upload_io import read_upload_capped
 
 opportunities_router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 
@@ -120,6 +125,18 @@ def update_eligibility(
     return service.update_eligibility(current_user, opportunity_id, payload)
 
 
+@opportunities_router.get(
+    "/{opportunity_id}/documents",
+    response_model=list[OpportunityDocumentResponse],
+)
+def list_documents(
+    opportunity_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: HiringOpportunityService = Depends(get_hiring_opportunity_service),
+) -> list[OpportunityDocumentResponse]:
+    return service.list_documents(current_user, opportunity_id)
+
+
 @opportunities_router.post(
     "/{opportunity_id}/documents",
     response_model=OpportunityDocumentResponse,
@@ -132,6 +149,32 @@ def add_document(
     service: HiringOpportunityService = Depends(get_hiring_opportunity_service),
 ) -> OpportunityDocumentResponse:
     return service.add_document(current_user, opportunity_id, payload)
+
+
+@opportunities_router.post(
+    "/{opportunity_id}/documents/upload",
+    response_model=OpportunityDocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_opportunity_document(
+    opportunity_id: uuid.UUID,
+    file: UploadFile = File(...),
+    document_type: OpportunityDocumentType = Form(...),
+    current_user: User = Depends(get_current_user),
+    service: HiringOpportunityService = Depends(get_hiring_opportunity_service),
+) -> OpportunityDocumentResponse:
+    filename, content, content_type = await read_upload_capped(
+        file,
+        UploadCategory.DOCUMENT,
+    )
+    return service.upload_document(
+        current_user,
+        opportunity_id,
+        filename=filename,
+        content=content,
+        content_type=content_type,
+        document_type=document_type,
+    )
 
 
 @opportunities_router.get(

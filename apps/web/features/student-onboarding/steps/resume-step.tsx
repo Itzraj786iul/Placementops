@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FileUpload } from "@/components/ui/file-upload";
 import { EmptyState } from "@/features/student-onboarding/components/empty-state";
 import { FormField } from "@/features/student-onboarding/components/form-field";
 import { ResumeCard } from "@/features/student-onboarding/components/resume-card";
@@ -15,9 +17,10 @@ import {
   useStudentOnboardingData,
 } from "@/features/student-onboarding/hooks/use-student-data";
 import {
-  createResume,
   deleteResume,
+  replaceResumeFile,
   updateResume,
+  uploadResume,
 } from "@/features/student-onboarding/api/student-client";
 
 export function ResumeStep() {
@@ -26,28 +29,13 @@ export function ResumeStep() {
   const { invalidateAll } = useInvalidateStudentQueries();
   const [showUpload, setShowUpload] = React.useState(false);
   const [name, setName] = React.useState("");
-  const [fileUrl, setFileUrl] = React.useState("");
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [renameValue, setRenameValue] = React.useState("");
+  const [replacingId, setReplacingId] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
     await invalidateAll(profileId);
   }, [invalidateAll, profileId]);
-
-  const handleUpload = async () => {
-    if (!name.trim() || !fileUrl.trim()) return;
-    const isFirst = !resumes.data?.length;
-    await createResume(profileId, {
-      name: name.trim(),
-      file_url: fileUrl.trim(),
-      version: 1,
-      is_active: isFirst,
-    });
-    setName("");
-    setFileUrl("");
-    setShowUpload(false);
-    await refresh();
-  };
 
   const handleActivate = async (resumeId: string) => {
     const all = resumes.data ?? [];
@@ -77,12 +65,12 @@ export function ResumeStep() {
   return (
     <SectionCard
       title="Resume Library"
-      description="Upload multiple resumes and mark one as active."
+      description="Upload PDF or Word resumes and mark one as active."
     >
       {!resumes.data?.length && !showUpload ? (
         <EmptyState
           title="No resumes yet"
-          description="Upload your first resume using a shareable file link."
+          description="Upload your first resume (PDF, DOC, or DOCX, max 10 MB)."
           action={
             !isReadOnly && (
               <Button type="button" onClick={() => setShowUpload(true)}>
@@ -118,17 +106,51 @@ export function ResumeStep() {
                 </Button>
               </div>
             ) : (
-              <ResumeCard
-                key={resume.id}
-                resume={resume}
-                isReadOnly={isReadOnly}
-                onActivate={() => handleActivate(resume.id)}
-                onRename={() => {
-                  setRenamingId(resume.id);
-                  setRenameValue(resume.name);
-                }}
-                onDelete={() => handleDelete(resume.id)}
-              />
+              <div key={resume.id} className="space-y-2">
+                <ResumeCard
+                  resume={resume}
+                  isReadOnly={isReadOnly}
+                  onActivate={() => handleActivate(resume.id)}
+                  onRename={() => {
+                    setRenamingId(resume.id);
+                    setRenameValue(resume.name);
+                  }}
+                  onDelete={() => handleDelete(resume.id)}
+                />
+                {!isReadOnly && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setReplacingId(
+                        replacingId === resume.id ? null : resume.id,
+                      )
+                    }
+                  >
+                    {replacingId === resume.id
+                      ? "Cancel replace"
+                      : "Replace file"}
+                  </Button>
+                )}
+                {replacingId === resume.id && (
+                  <FileUpload
+                    category="resume"
+                    hint="PDF, DOC, DOCX · max 10 MB"
+                    onUpload={async (file, onProgress) => {
+                      await replaceResumeFile(
+                        profileId,
+                        resume.id,
+                        file,
+                        onProgress,
+                      );
+                      toast.success("Resume file replaced");
+                      setReplacingId(null);
+                      await refresh();
+                    }}
+                  />
+                )}
+              </div>
             ),
           )}
         </div>
@@ -136,23 +158,33 @@ export function ResumeStep() {
       {!isReadOnly && (showUpload || (resumes.data?.length ?? 0) > 0) && (
         <div className="mt-6 space-y-3 rounded-lg border border-dashed p-4">
           <p className="text-sm font-medium">Add resume</p>
-          <FormField label="Resume Name">
+          <FormField label="Resume Name (optional)">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Software Engineering Resume"
             />
           </FormField>
-          <FormField label="File URL">
-            <Input
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-              placeholder="https://..."
-            />
-          </FormField>
-          <Button type="button" size="sm" onClick={handleUpload}>
-            Upload
-          </Button>
+          <FileUpload
+            category="resume"
+            hint="PDF, DOC, DOCX · max 10 MB"
+            onUpload={async (file, onProgress) => {
+              const isFirst = !resumes.data?.length;
+              await uploadResume(
+                profileId,
+                file,
+                {
+                  name: name.trim() || undefined,
+                  is_active: isFirst,
+                },
+                onProgress,
+              );
+              toast.success("Resume uploaded");
+              setName("");
+              setShowUpload(false);
+              await refresh();
+            }}
+          />
         </div>
       )}
     </SectionCard>

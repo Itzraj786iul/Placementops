@@ -51,8 +51,6 @@ export const DEFAULT_APPLICATION_FILTERS = {
 export const APPLICATIONS_PAGE_SIZE = 10;
 
 export const BACKEND_LIMITATIONS = {
-  noDocumentsList:
-    "Document listing is not available yet. The backend supports upload (POST) but has no GET /opportunities/{id}/documents endpoint.",
   noApplicationQuestions:
     "Application question definitions cannot be loaded. Answer text is shown when present on the application detail.",
   listLacksStudentFields:

@@ -11,6 +11,7 @@ from app.modules.imports.router import imports_router
 from app.modules.students.router import students_router
 from app.modules.users.router import roles_router
 from app.platform.auth.router import router as auth_router
+from app.platform.notifications.router import notifications_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
@@ -24,3 +25,4 @@ api_router.include_router(eligibility_router)
 api_router.include_router(exports_router)
 api_router.include_router(imports_router)
 api_router.include_router(audit_router)
+api_router.include_router(notifications_router)

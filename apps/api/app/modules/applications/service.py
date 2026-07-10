@@ -130,6 +130,17 @@ class ApplicationService:
                 "selected_resume_id": str(resume.id),
             },
         )
+        from app.platform.notifications.triggers import notify_application_submitted
+
+        try:
+            notify_application_submitted(
+                self.db,
+                recipient_user_id=user.id,
+                application_id=application.id,
+                opportunity=opportunity,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         self.db.commit()
         return self._application_response(
             self.repository.get_by_id(application.id),
@@ -184,6 +195,17 @@ class ApplicationService:
             old_values={"status": old_status.value},
             new_values={"status": application.status.value},
         )
+        from app.platform.notifications.triggers import notify_application_withdrawn
+
+        try:
+            notify_application_withdrawn(
+                self.db,
+                recipient_user_id=user.id,
+                application_id=application.id,
+                opportunity=opportunity,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         self.db.commit()
         return self._application_response(
             self.repository.get_by_id(application_id),
@@ -230,6 +252,20 @@ class ApplicationService:
             new_values={"status": application.status.value},
             metadata={"remarks": payload.remarks} if payload.remarks else None,
         )
+        from app.platform.notifications.triggers import notify_application_status_changed
+
+        opportunity = self.repository.get_opportunity(application.hiring_opportunity_id)
+        try:
+            notify_application_status_changed(
+                self.db,
+                recipient_user_id=application.student_profile.user_id,
+                application_id=application.id,
+                opportunity=opportunity,
+                old_status=old_status,
+                new_status=payload.status,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         self.db.commit()
         return self._application_response(
             self.repository.get_by_id(application_id),

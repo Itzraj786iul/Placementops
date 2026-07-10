@@ -140,6 +140,52 @@ export async function createResume(
   });
 }
 
+export async function uploadResume(
+  profileId: string,
+  file: File,
+  options: { name?: string; is_active?: boolean } = {},
+  onProgress: (pct: number) => void = () => undefined,
+): Promise<Resume> {
+  const { uploadWithProgress, parseUploadError } =
+    await import("@/components/ui/file-upload");
+  const form = new FormData();
+  form.append("file", file);
+  if (options.name) form.append("name", options.name);
+  if (options.is_active != null) {
+    form.append("is_active", String(options.is_active));
+  }
+  const response = await uploadWithProgress(
+    `/api/v1/students/profiles/${profileId}/resumes/upload`,
+    form,
+    onProgress,
+  );
+  if (!response.ok) {
+    throw new Error(await parseUploadError(response));
+  }
+  return response.json() as Promise<Resume>;
+}
+
+export async function replaceResumeFile(
+  profileId: string,
+  resumeId: string,
+  file: File,
+  onProgress: (pct: number) => void = () => undefined,
+): Promise<Resume> {
+  const { uploadWithProgress, parseUploadError } =
+    await import("@/components/ui/file-upload");
+  const form = new FormData();
+  form.append("file", file);
+  const response = await uploadWithProgress(
+    `/api/v1/students/profiles/${profileId}/resumes/${resumeId}/replace`,
+    form,
+    onProgress,
+  );
+  if (!response.ok) {
+    throw new Error(await parseUploadError(response));
+  }
+  return response.json() as Promise<Resume>;
+}
+
 export async function updateResume(
   profileId: string,
   resumeId: string,
@@ -182,6 +228,29 @@ export async function createDocument(
     `/students/profiles/${profileId}/documents`,
     { method: "POST", body: JSON.stringify(payload) },
   );
+}
+
+export async function uploadDocument(
+  profileId: string,
+  file: File,
+  options: { document_type: string; file_name?: string },
+  onProgress: (pct: number) => void = () => undefined,
+): Promise<StudentDocument> {
+  const { uploadWithProgress, parseUploadError } =
+    await import("@/components/ui/file-upload");
+  const form = new FormData();
+  form.append("file", file);
+  form.append("document_type", options.document_type);
+  if (options.file_name) form.append("file_name", options.file_name);
+  const response = await uploadWithProgress(
+    `/api/v1/students/profiles/${profileId}/documents/upload`,
+    form,
+    onProgress,
+  );
+  if (!response.ok) {
+    throw new Error(await parseUploadError(response));
+  }
+  return response.json() as Promise<StudentDocument>;
 }
 
 export async function updateDocument(

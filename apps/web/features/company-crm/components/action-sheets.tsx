@@ -4,7 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import * as React from "react";
+
 import { Button } from "@/components/ui/button";
+import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,18 +22,16 @@ import {
 import { useCompanyMutations } from "@/features/company-crm/hooks/use-companies";
 import { useCreateContact } from "@/features/company-crm/hooks/use-company-contacts";
 import { useCreateCommunication } from "@/features/company-crm/hooks/use-company-timeline";
-import { createDocument } from "@/features/company-crm/api/company-client";
+import { uploadDocument } from "@/features/company-crm/api/company-client";
 import {
   communicationCreateSchema,
   companyUpdateSchema,
   contactCreateSchema,
-  documentCreateSchema,
   handlerAssignSchema,
   pipelineUpdateSchema,
   type CommunicationCreateValues,
   type CompanyUpdateValues,
   type ContactCreateValues,
-  type DocumentCreateValues,
   type HandlerAssignValues,
   type PipelineUpdateValues,
 } from "@/features/company-crm/schemas/company-schemas";
@@ -115,10 +116,7 @@ export function ActionSheets({
     },
   });
 
-  const docForm = useForm<DocumentCreateValues>({
-    resolver: zodResolver(documentCreateSchema),
-    defaultValues: { document_type: "JD", file_url: "" },
-  });
+  const [docType, setDocType] = React.useState<string>("JD");
 
   if (!companyId) return null;
 
@@ -352,32 +350,30 @@ export function ActionSheets({
         onClose={onClose}
         title="Upload Document"
       >
-        <form
-          onSubmit={docForm.handleSubmit(async (data) => {
-            try {
-              const doc = await createDocument(companyId, data);
-              onDocumentUploaded(doc);
-              toast.success("Document uploaded");
-              docForm.reset();
-              onClose();
-            } catch {
-              toast.error("Upload failed");
-            }
-          })}
-          className="space-y-3"
-        >
-          <Select {...docForm.register("document_type")}>
+        <div className="space-y-3">
+          <Select value={docType} onChange={(e) => setDocType(e.target.value)}>
             {DOCUMENT_TYPES.map((t) => (
               <option key={t} value={t}>
                 {DOCUMENT_LABELS[t]}
               </option>
             ))}
           </Select>
-          <Input {...docForm.register("file_url")} placeholder="File URL" />
-          <Button type="submit" className="w-full">
-            Upload
-          </Button>
-        </form>
+          <FileUpload
+            category="document"
+            hint="PDF, DOC, DOCX, PNG, JPG · max 10 MB"
+            onUpload={async (file, onProgress) => {
+              const doc = await uploadDocument(
+                companyId,
+                file,
+                docType,
+                onProgress,
+              );
+              onDocumentUploaded(doc);
+              toast.success("Document uploaded");
+              onClose();
+            }}
+          />
+        </div>
       </SlideOver>
     </>
   );

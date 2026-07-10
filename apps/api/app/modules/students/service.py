@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.modules.students.access import ensure_profile_access, ensure_staff_access, is_staff_user
 from app.modules.students.completion import calculate_profile_completion
 from app.modules.students.enums import ProfileStatus
+from app.modules.students.enums import DocumentType
 from app.modules.students.exceptions import (
     StudentConflictError,
     StudentNotFoundError,
@@ -58,6 +59,9 @@ from app.modules.audit.recorder import record_audit
 from app.modules.audit.serialize import snapshot_fields
 from app.modules.users.models import User
 from app.platform.permissions.permissions import has_role
+from app.platform.storage.cloudinary_service import CloudinaryService
+from app.platform.storage.dependencies import get_cloudinary_service
+from app.platform.storage.types import UploadCategory
 from app.utils.datetime import utc_now
 
 _PROFILE_AUDIT_FIELDS = [
@@ -71,9 +75,10 @@ _PROFILE_AUDIT_FIELDS = [
 
 
 class StudentService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, storage: CloudinaryService | None = None) -> None:
         self.db = db
         self.repository = StudentRepository(db)
+        self.storage = storage or get_cloudinary_service()
 
     def list_departments(self) -> list[DepartmentResponse]:
         return [
@@ -376,6 +381,73 @@ class StudentService:
         self.db.commit()
         return ResumeResponse.model_validate(resume)
 
+    def upload_resume(
+        self,
+        user: User,
+        profile_id: uuid.UUID,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str | None,
+        name: str | None = None,
+        is_active: bool = False,
+    ) -> ResumeResponse:
+        profile = ensure_profile_access(
+            user,
+            self.repository.get_profile_by_id(profile_id),
+        )
+        stored = self.storage.upload(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+            category=UploadCategory.RESUME,
+            folder=f"placementos/students/{profile_id}/resumes",
+        )
+        if is_active:
+            self.repository.deactivate_resumes(profile_id)
+        resume = StudentResumeLibrary(
+            student_profile_id=profile_id,
+            name=(name or stored.original_filename)[:150],
+            file_url=stored.url[:500],
+            version=1,
+            is_active=is_active,
+        )
+        self.repository.save_resume(resume)
+        self._refresh_completion(profile)
+        self.db.commit()
+        return ResumeResponse.model_validate(resume)
+
+    def replace_resume_file(
+        self,
+        user: User,
+        profile_id: uuid.UUID,
+        resume_id: uuid.UUID,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str | None,
+    ) -> ResumeResponse:
+        profile = ensure_profile_access(
+            user,
+            self.repository.get_profile_by_id(profile_id),
+        )
+        resume = self.repository.get_resume_by_id(resume_id)
+        if resume is None or resume.student_profile_id != profile_id:
+            raise StudentNotFoundError("Resume not found")
+        stored = self.storage.replace(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+            category=UploadCategory.RESUME,
+            folder=f"placementos/students/{profile_id}/resumes",
+            old_url=resume.file_url,
+        )
+        resume.file_url = stored.url[:500]
+        resume.version = (resume.version or 1) + 1
+        self._refresh_completion(profile)
+        self.db.commit()
+        return ResumeResponse.model_validate(resume)
+
     def list_resumes(self, user: User, profile_id: uuid.UUID) -> list[ResumeResponse]:
         ensure_profile_access(user, self.repository.get_profile_by_id(profile_id))
         return [
@@ -418,9 +490,14 @@ class StudentService:
         resume = self.repository.get_resume_by_id(resume_id)
         if resume is None or resume.student_profile_id != profile_id:
             raise StudentNotFoundError("Resume not found")
+        file_url = resume.file_url
         self.repository.delete_resume(resume)
         self._refresh_completion(profile)
         self.db.commit()
+        try:
+            self.storage.delete(file_url)
+        except Exception:  # noqa: BLE001 — DB delete already committed
+            pass
 
     def create_document(
         self,
@@ -434,6 +511,104 @@ class StudentService:
         )
         document = StudentDocument(student_profile_id=profile_id, **payload.model_dump())
         self.repository.save_document(document)
+        self._refresh_completion(profile)
+        self.db.commit()
+        return DocumentResponse.model_validate(document)
+
+    def upload_document(
+        self,
+        user: User,
+        profile_id: uuid.UUID,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str | None,
+        document_type: DocumentType,
+        file_name: str | None = None,
+    ) -> DocumentResponse:
+        profile = ensure_profile_access(
+            user,
+            self.repository.get_profile_by_id(profile_id),
+        )
+        category = (
+            UploadCategory.IMAGE
+            if document_type == DocumentType.PHOTO
+            else UploadCategory.DOCUMENT
+        )
+        stored = self.storage.upload(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+            category=category,
+            folder=f"placementos/students/{profile_id}/documents",
+        )
+        existing = next(
+            (
+                doc
+                for doc in self.repository.list_documents(profile_id)
+                if doc.document_type == document_type
+            ),
+            None,
+        )
+        if existing is not None:
+            old_url = existing.file_url
+            existing.file_url = stored.url[:500]
+            existing.file_name = (file_name or stored.original_filename)[:255]
+            self._refresh_completion(profile)
+            self.db.commit()
+            try:
+                self.storage.delete(old_url)
+            except Exception:  # noqa: BLE001
+                pass
+            return DocumentResponse.model_validate(existing)
+
+        document = StudentDocument(
+            student_profile_id=profile_id,
+            document_type=document_type,
+            file_url=stored.url[:500],
+            file_name=(file_name or stored.original_filename)[:255],
+        )
+        self.repository.save_document(document)
+        self._refresh_completion(profile)
+        self.db.commit()
+        return DocumentResponse.model_validate(document)
+
+    def replace_document_file(
+        self,
+        user: User,
+        profile_id: uuid.UUID,
+        document_id: uuid.UUID,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str | None,
+        file_name: str | None = None,
+    ) -> DocumentResponse:
+        profile = ensure_profile_access(
+            user,
+            self.repository.get_profile_by_id(profile_id),
+        )
+        document = self.repository.get_document_by_id(document_id)
+        if document is None or document.student_profile_id != profile_id:
+            raise StudentNotFoundError("Document not found")
+        category = (
+            UploadCategory.IMAGE
+            if document.document_type == DocumentType.PHOTO
+            else UploadCategory.DOCUMENT
+        )
+        stored = self.storage.replace(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+            category=category,
+            folder=f"placementos/students/{profile_id}/documents",
+            old_url=document.file_url,
+        )
+        document.file_url = stored.url[:500]
+        if file_name:
+            document.file_name = file_name[:255]
+        else:
+            document.file_name = stored.original_filename[:255]
         self._refresh_completion(profile)
         self.db.commit()
         return DocumentResponse.model_validate(document)
@@ -484,9 +659,14 @@ class StudentService:
         document = self.repository.get_document_by_id(document_id)
         if document is None or document.student_profile_id != profile_id:
             raise StudentNotFoundError("Document not found")
+        file_url = document.file_url
         self.repository.delete_document(document)
         self._refresh_completion(profile)
         self.db.commit()
+        try:
+            self.storage.delete(file_url)
+        except Exception:  # noqa: BLE001
+            pass
 
     def create_skill(
         self,

@@ -52,3 +52,42 @@ export async function fetchCompanyName(companyId: string): Promise<string> {
   const company = await apiRequest<{ name: string }>(`/companies/${companyId}`);
   return company.name;
 }
+
+export type OpportunityDocument = {
+  id: string;
+  hiring_opportunity_id: string;
+  document_type: string;
+  file_url: string;
+  uploaded_by: string;
+  uploaded_at: string;
+};
+
+export async function fetchOpportunityDocuments(
+  opportunityId: string,
+): Promise<OpportunityDocument[]> {
+  return apiRequest<OpportunityDocument[]>(
+    `/opportunities/${opportunityId}/documents`,
+  );
+}
+
+export async function uploadOpportunityDocument(
+  opportunityId: string,
+  file: File,
+  documentType: string,
+  onProgress: (pct: number) => void = () => undefined,
+): Promise<OpportunityDocument> {
+  const { uploadWithProgress, parseUploadError } =
+    await import("@/components/ui/file-upload");
+  const form = new FormData();
+  form.append("file", file);
+  form.append("document_type", documentType);
+  const response = await uploadWithProgress(
+    `/api/v1/opportunities/${opportunityId}/documents/upload`,
+    form,
+    onProgress,
+  );
+  if (!response.ok) {
+    throw new Error(await parseUploadError(response));
+  }
+  return response.json() as Promise<OpportunityDocument>;
+}

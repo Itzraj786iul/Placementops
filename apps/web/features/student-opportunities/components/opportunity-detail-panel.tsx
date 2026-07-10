@@ -121,7 +121,9 @@ export function OpportunityDetailPanel({
           }}
         />
       )}
-      {activeTab === "documents" && <DocumentsTab />}
+      {activeTab === "documents" && (
+        <DocumentsTab opportunityId={opportunityId} />
+      )}
       {activeTab === "application" && applicationEnabled && (
         <ApplicationPanel
           opportunityId={opportunityId}

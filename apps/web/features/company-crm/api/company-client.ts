@@ -126,3 +126,25 @@ export async function createDocument(
     body: JSON.stringify(payload),
   });
 }
+
+export async function uploadDocument(
+  companyId: string,
+  file: File,
+  documentType: string,
+  onProgress: (pct: number) => void = () => undefined,
+): Promise<CompanyDocument> {
+  const { uploadWithProgress, parseUploadError } =
+    await import("@/components/ui/file-upload");
+  const form = new FormData();
+  form.append("file", file);
+  form.append("document_type", documentType);
+  const response = await uploadWithProgress(
+    `/api/v1/companies/${companyId}/documents/upload`,
+    form,
+    onProgress,
+  );
+  if (!response.ok) {
+    throw new Error(await parseUploadError(response));
+  }
+  return response.json() as Promise<CompanyDocument>;
+}

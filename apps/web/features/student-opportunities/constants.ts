@@ -57,8 +57,6 @@ export const DEFAULT_FILTERS = {
 } as const;
 
 export const BACKEND_LIMITATIONS = {
-  noDocumentsList:
-    "Document downloads are not available yet. The backend has no list-documents endpoint for students.",
   noQuestionsList:
     "Custom application questions cannot be loaded. Apply with your active resume only until question endpoints are added.",
   noCompanyNames:

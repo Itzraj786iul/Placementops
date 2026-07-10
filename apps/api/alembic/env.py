@@ -12,6 +12,7 @@ from app.modules.hiring_opportunities import models as hiring_opportunities_mode
 from app.modules.applications import models as applications_models  # noqa: F401
 from app.modules.imports import models as imports_models  # noqa: F401
 from app.modules.audit import models as audit_models  # noqa: F401
+from app.platform.notifications import models as notification_models  # noqa: F401
 from app.platform.auth.models import (  # noqa: F401
     AuthCode,
     AuthIdentity,

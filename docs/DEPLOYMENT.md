@@ -70,9 +70,9 @@ Or let the Render start command run migrations (see below).
 | `GOOGLE_CLIENT_ID`      | Google OAuth client ID (if using Google login)                           |
 | `GOOGLE_CLIENT_SECRET`  | Google OAuth secret                                                      |
 | `GOOGLE_REDIRECT_URI`   | `https://<your-render-service>.onrender.com/api/v1/auth/google/callback` |
-| `CLOUDINARY_CLOUD_NAME` | Optional until uploads are enabled                                       |
-| `CLOUDINARY_API_KEY`    | Optional                                                                 |
-| `CLOUDINARY_API_SECRET` | Optional                                                                 |
+| `CLOUDINARY_CLOUD_NAME` | Required for file uploads (resumes, documents, images)                   |
+| `CLOUDINARY_API_KEY`    | From Cloudinary dashboard → API Keys                                     |
+| `CLOUDINARY_API_SECRET` | Keep secret; never commit                                                |
 
 After deploy, open: `https://<service>.onrender.com/health` → should return `{"status":"ok"}`.
 
@@ -113,8 +113,36 @@ Simplest path that usually works:
 
 ## 4. File Storage — Cloudinary (free)
 
-1. Create a free Cloudinary account.
-2. Add `CLOUDINARY_*` on Render when you enable uploads.
+1. Create a free Cloudinary account at [cloudinary.com](https://cloudinary.com).
+2. Copy **Cloud name**, **API Key**, and **API Secret** from the dashboard.
+3. Set on Render (and locally in `apps/api/.env`):
+
+```env
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
+
+Uploads (resumes, student/company/opportunity documents) return a secure `file_url` stored in Postgres. Without these vars, multipart upload endpoints return **503**.
+
+**Limits:** resumes/documents 10 MB; images (e.g. photo) 5 MB. Types: PDF, DOC, DOCX, PNG, JPG, JPEG.
+
+---
+
+## 4b. Email — Resend (free tier)
+
+Notifications use a provider abstraction; the default provider is **Resend**.
+
+1. Create an account at [resend.com](https://resend.com) and create an API key.
+2. Set on Render / local `.env`:
+
+```env
+RESEND_API_KEY=re_...
+EMAIL_FROM=PlacementOS <onboarding@resend.dev>
+EMAIL_PROVIDER=resend
+```
+
+Without `RESEND_API_KEY`, in-app notifications still work; email delivery is skipped (`delivery_status=SKIPPED`).
 
 ---
 

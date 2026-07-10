@@ -75,7 +75,7 @@ export function DevLoginForm({ redirectTo }: DevLoginFormProps) {
             id="dev-password"
             type="password"
             autoComplete="current-password"
-            placeholder="PlacementOS123!"
+            placeholder="Password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required

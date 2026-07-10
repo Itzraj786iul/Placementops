@@ -66,6 +66,14 @@ class HiringOpportunityRepository:
         self.db.flush()
         return document
 
+    def list_documents(self, opportunity_id: uuid.UUID) -> list[OpportunityDocument]:
+        stmt = (
+            select(OpportunityDocument)
+            .where(OpportunityDocument.hiring_opportunity_id == opportunity_id)
+            .order_by(OpportunityDocument.uploaded_at.desc())
+        )
+        return list(self.db.scalars(stmt).all())
+
     def save_timeline_entry(self, entry: OpportunityTimeline) -> OpportunityTimeline:
         self.db.add(entry)
         self.db.flush()

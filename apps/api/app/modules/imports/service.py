@@ -116,6 +116,7 @@ class ImportService:
 
         updated = 0
         skipped = 0
+        status_updates: list[tuple[uuid.UUID, ApplicationStatus, ApplicationStatus]] = []
 
         for row in import_record.rows:
             if row.match_status != RowMatchStatus.MATCHED or row.application_id is None:
@@ -138,9 +139,13 @@ class ImportService:
                 row.message = str(exc)
                 continue
 
+            old_status = application.status
             application.status = import_record.target_status
             row.current_status = import_record.target_status
             updated += 1
+            status_updates.append(
+                (application.id, old_status, import_record.target_status),
+            )
 
         import_record.status = ImportStatus.CONFIRMED
         import_record.rows_updated = updated
@@ -167,6 +172,14 @@ class ImportService:
                 "duplicate_rows": import_record.duplicate_rows,
                 "invalid_rows": import_record.invalid_rows,
             },
+        )
+        from app.platform.notifications.triggers import notify_shortlist_import_affected
+
+        opportunity = self.repository.get_opportunity(opportunity_id)
+        notify_shortlist_import_affected(
+            self.db,
+            updates=status_updates,
+            opportunity=opportunity,
         )
         self.repository.commit()
 

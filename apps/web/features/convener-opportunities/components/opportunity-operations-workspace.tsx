@@ -221,7 +221,9 @@ export function OpportunityOperationsWorkspace({
         {activeTab === "screening" && screeningTabEnabled && (
           <ScreeningPanel opportunityId={opportunityId} />
         )}
-        {activeTab === "documents" && <DocumentsPanel />}
+        {activeTab === "documents" && (
+          <DocumentsPanel opportunityId={opportunityId} />
+        )}
         {activeTab === "timeline" && timelineTabEnabled && (
           <TimelinePanel
             timeline={timelineQuery.data}

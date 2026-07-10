@@ -1,8 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
 
 from app.modules.students.dependencies import get_student_service
+from app.modules.students.enums import DocumentType
 from app.modules.students.schemas import (
     DocumentCreate,
     DocumentResponse,
@@ -25,6 +26,8 @@ from app.modules.students.schemas import (
 from app.modules.students.service import StudentService
 from app.modules.users.models import User
 from app.platform.auth.dependencies import get_current_user
+from app.platform.storage.types import UploadCategory
+from app.platform.storage.upload_io import read_upload_capped
 
 entity_router = APIRouter(prefix="/profiles/{profile_id}", tags=["students"])
 
@@ -94,6 +97,59 @@ def create_resume(
     return service.create_resume(current_user, profile_id, payload)
 
 
+@entity_router.post(
+    "/resumes/upload",
+    response_model=ResumeResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_resume(
+    profile_id: uuid.UUID,
+    file: UploadFile = File(...),
+    name: str | None = Form(default=None),
+    is_active: bool = Form(default=False),
+    current_user: User = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service),
+) -> ResumeResponse:
+    filename, content, content_type = await read_upload_capped(
+        file,
+        UploadCategory.RESUME,
+    )
+    return service.upload_resume(
+        current_user,
+        profile_id,
+        filename=filename,
+        content=content,
+        content_type=content_type,
+        name=name,
+        is_active=is_active,
+    )
+
+
+@entity_router.post(
+    "/resumes/{resume_id}/replace",
+    response_model=ResumeResponse,
+)
+async def replace_resume(
+    profile_id: uuid.UUID,
+    resume_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service),
+) -> ResumeResponse:
+    filename, content, content_type = await read_upload_capped(
+        file,
+        UploadCategory.RESUME,
+    )
+    return service.replace_resume_file(
+        current_user,
+        profile_id,
+        resume_id,
+        filename=filename,
+        content=content,
+        content_type=content_type,
+    )
+
+
 @entity_router.get("/resumes", response_model=list[ResumeResponse])
 def list_resumes(
     profile_id: uuid.UUID,
@@ -137,6 +193,64 @@ def create_document(
     service: StudentService = Depends(get_student_service),
 ) -> DocumentResponse:
     return service.create_document(current_user, profile_id, payload)
+
+
+@entity_router.post(
+    "/documents/upload",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_document(
+    profile_id: uuid.UUID,
+    file: UploadFile = File(...),
+    document_type: DocumentType = Form(...),
+    file_name: str | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service),
+) -> DocumentResponse:
+    category = (
+        UploadCategory.IMAGE
+        if document_type == DocumentType.PHOTO
+        else UploadCategory.DOCUMENT
+    )
+    filename, content, content_type = await read_upload_capped(file, category)
+    return service.upload_document(
+        current_user,
+        profile_id,
+        filename=filename,
+        content=content,
+        content_type=content_type,
+        document_type=document_type,
+        file_name=file_name,
+    )
+
+
+@entity_router.post(
+    "/documents/{document_id}/replace",
+    response_model=DocumentResponse,
+)
+async def replace_document(
+    profile_id: uuid.UUID,
+    document_id: uuid.UUID,
+    file: UploadFile = File(...),
+    file_name: str | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service),
+) -> DocumentResponse:
+    # Cap at document max; service re-validates IMAGE vs DOCUMENT by type.
+    filename, content, content_type = await read_upload_capped(
+        file,
+        UploadCategory.DOCUMENT,
+    )
+    return service.replace_document_file(
+        current_user,
+        profile_id,
+        document_id,
+        filename=filename,
+        content=content,
+        content_type=content_type,
+        file_name=file_name,
+    )
 
 
 @entity_router.get("/documents", response_model=list[DocumentResponse])

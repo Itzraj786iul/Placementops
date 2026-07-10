@@ -8,7 +8,11 @@ from app.modules.hiring_opportunities.access import (
     ensure_staff_access,
     is_staff_user,
 )
-from app.modules.hiring_opportunities.enums import OpportunityStatus, TimelineStage
+from app.modules.hiring_opportunities.enums import (
+    OpportunityDocumentType,
+    OpportunityStatus,
+    TimelineStage,
+)
 from app.modules.hiring_opportunities.exceptions import (
     OpportunityNotFoundError,
     OpportunityValidationError,
@@ -40,6 +44,9 @@ from app.modules.audit.enums import AuditAction, AuditEntityType
 from app.modules.audit.recorder import record_audit
 from app.modules.audit.serialize import snapshot_fields
 from app.modules.users.models import User
+from app.platform.storage.cloudinary_service import CloudinaryService
+from app.platform.storage.dependencies import get_cloudinary_service
+from app.platform.storage.types import UploadCategory
 from app.utils.datetime import utc_now
 
 _OPPORTUNITY_AUDIT_FIELDS = [
@@ -58,9 +65,10 @@ _OPPORTUNITY_AUDIT_FIELDS = [
 
 
 class HiringOpportunityService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, storage: CloudinaryService | None = None) -> None:
         self.db = db
         self.repository = HiringOpportunityRepository(db)
+        self.storage = storage or get_cloudinary_service()
 
     def list_opportunities(
         self,
@@ -224,6 +232,12 @@ class HiringOpportunityService:
             old_values={"status": old_status.value},
             new_values={"status": opportunity.status.value},
         )
+        # Reload with eligibility for fan-out
+        published = self.repository.get_by_id(opportunity_id)
+        if published is not None:
+            from app.platform.notifications.triggers import notify_opportunity_published
+
+            notify_opportunity_published(self.db, published)
         self.db.commit()
         return self._opportunity_response(self.repository.get_by_id(opportunity_id))
 
@@ -311,6 +325,17 @@ class HiringOpportunityService:
         self.db.commit()
         return EligibilityRuleResponse.model_validate(rule)
 
+    def list_documents(
+        self,
+        user: User,
+        opportunity_id: uuid.UUID,
+    ) -> list[OpportunityDocumentResponse]:
+        ensure_opportunity_read_access(user, self.repository.get_by_id(opportunity_id))
+        return [
+            OpportunityDocumentResponse.model_validate(document)
+            for document in self.repository.list_documents(opportunity_id)
+        ]
+
     def add_document(
         self,
         user: User,
@@ -329,6 +354,42 @@ class HiringOpportunityService:
             hiring_opportunity_id=opportunity_id,
             document_type=payload.document_type,
             file_url=payload.file_url,
+            uploaded_by=user.id,
+        )
+        self.repository.save_document(document)
+        opportunity.updated_at = utc_now()
+        self.db.commit()
+        return OpportunityDocumentResponse.model_validate(document)
+
+    def upload_document(
+        self,
+        user: User,
+        opportunity_id: uuid.UUID,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str | None,
+        document_type: OpportunityDocumentType,
+    ) -> OpportunityDocumentResponse:
+        ensure_staff_access(user)
+        opportunity = self._get_or_raise(opportunity_id)
+
+        if opportunity.status == OpportunityStatus.ARCHIVED:
+            raise OpportunityValidationError(
+                "Cannot upload documents to archived opportunities",
+            )
+
+        stored = self.storage.upload(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+            category=UploadCategory.DOCUMENT,
+            folder=f"placementos/opportunities/{opportunity_id}/documents",
+        )
+        document = OpportunityDocument(
+            hiring_opportunity_id=opportunity_id,
+            document_type=document_type,
+            file_url=stored.url[:500],
             uploaded_by=user.id,
         )
         self.repository.save_document(document)
@@ -374,6 +435,12 @@ class HiringOpportunityService:
             payload.remarks,
         )
         opportunity.updated_at = utc_now()
+        if payload.stage == TimelineStage.OFFER_RELEASED:
+            from app.platform.notifications.triggers import (
+                notify_offer_released_for_opportunity,
+            )
+
+            notify_offer_released_for_opportunity(self.db, opportunity)
         self.db.commit()
         return TimelineEntryResponse.model_validate(entry)
 
