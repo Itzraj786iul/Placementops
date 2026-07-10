@@ -12,9 +12,14 @@ export default function LandingPage() {
             <GraduationCap className="text-primary h-6 w-6" />
             <span>PlacementOS</span>
           </div>
-          <Button asChild>
-            <Link href="/login">Sign In</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/signup">Sign up</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/login">Sign In</Link>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -30,7 +35,10 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/login">Get Started</Link>
+              <Link href="/signup">Get Started</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/login">Sign in</Link>
             </Button>
           </div>
         </div>

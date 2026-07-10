@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -28,8 +30,26 @@ from app.platform.exceptions import ApplicationError
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _google_oauth_configured() -> bool:
+    client_id = (settings.GOOGLE_CLIENT_ID or "").strip()
+    client_secret = (settings.GOOGLE_CLIENT_SECRET or "").strip()
+    return bool(
+        client_id
+        and client_secret
+        and "your-google-client" not in client_id
+        and "your-google-client" not in client_secret
+    )
+
+
 @router.get("/google/login")
 async def google_login(request: StarletteRequest) -> RedirectResponse:
+    if not _google_oauth_configured():
+        error_url = (
+            f"{settings.FRONTEND_URL}/login?error="
+            f"{quote('Google sign-in is not configured. Contact the administrator.')}"
+        )
+        return RedirectResponse(url=error_url, status_code=302)
+
     return await oauth.google.authorize_redirect(
         request,
         settings.GOOGLE_REDIRECT_URI,
@@ -53,9 +73,7 @@ async def google_callback(
         redirect_url = f"{settings.FRONTEND_URL}/auth/callback?code={auth_code}"
         return RedirectResponse(url=redirect_url, status_code=302)
     except ApplicationError as exc:
-        error_url = (
-            f"{settings.FRONTEND_URL}/login?error={exc.message.replace(' ', '+')}"
-        )
+        error_url = f"{settings.FRONTEND_URL}/login?error={quote(exc.message)}"
         return RedirectResponse(url=error_url, status_code=302)
 
 

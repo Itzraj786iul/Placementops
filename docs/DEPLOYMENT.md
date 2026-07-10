@@ -118,14 +118,44 @@ Simplest path that usually works:
 
 ---
 
-## 5. Google OAuth (optional)
+## 5. Google OAuth (required for Sign in / Sign up with Google)
 
-In Google Cloud Console → Credentials:
+Students **sign up automatically** on first successful Google login (JIT). Only
+`@nitrr.ac.in` emails are accepted. Staff roles are assigned by admins.
 
-- Authorized redirect URI:  
-  `https://<render-api>.onrender.com/api/v1/auth/google/callback`
-- Authorized JavaScript origins:  
-  `https://<your-app>.vercel.app`
+### Google Cloud Console
+
+1. Create an OAuth 2.0 **Web application** client.
+2. **Authorized redirect URI** (must match Render exactly):
+   ```
+   https://<your-render-api>.onrender.com/api/v1/auth/google/callback
+   ```
+3. **Authorized JavaScript origins**:
+   ```
+   https://<your-app>.vercel.app
+   https://<your-render-api>.onrender.com
+   ```
+
+### Render env vars
+
+| Variable               | Value                                                           |
+| ---------------------- | --------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`     | From Google Cloud Console                                       |
+| `GOOGLE_CLIENT_SECRET` | From Google Cloud Console                                       |
+| `GOOGLE_REDIRECT_URI`  | `https://<render-api>.onrender.com/api/v1/auth/google/callback` |
+| `FRONTEND_URL`         | `https://<your-app>.vercel.app`                                 |
+| `CORS_ORIGINS`         | Same as `FRONTEND_URL`                                          |
+| `COOKIE_SECURE`        | `true`                                                          |
+
+### Vercel env vars
+
+| Variable              | Value                                    |
+| --------------------- | ---------------------------------------- |
+| `NEXT_PUBLIC_API_URL` | `https://<your-render-api>.onrender.com` |
+| `INTERNAL_API_URL`    | Same Render URL                          |
+
+Redeploy Render and Vercel after saving. Then use **Sign up** or **Sign in with Google**
+with an `@nitrr.ac.in` account (personal Gmail will be rejected).
 
 ---
 

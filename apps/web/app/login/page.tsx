@@ -52,7 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </>
           )}
 
-          <GoogleSignInButton className="w-full" />
+          <GoogleSignInButton className="w-full" mode="signin" />
           <p className="text-muted-foreground mt-4 text-center text-xs">
             Only institutional email addresses ending with @nitrr.ac.in are
             permitted.
@@ -60,6 +60,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
 
         <p className="text-muted-foreground text-center text-sm">
+          New student?{" "}
+          <Link href="/signup" className="underline-offset-4 hover:underline">
+            Sign up
+          </Link>
+          {" · "}
           <Link href="/" className="underline-offset-4 hover:underline">
             Back to home
           </Link>

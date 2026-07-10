@@ -8,12 +8,18 @@ import { getGoogleLoginUrl } from "@/services/auth-client";
 
 type GoogleSignInButtonProps = {
   className?: string;
+  mode?: "signin" | "signup";
 };
 
-export function GoogleSignInButton({ className }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({
+  className,
+  mode = "signin",
+}: GoogleSignInButtonProps) {
   const [isRedirecting, setIsRedirecting] = React.useState(false);
+  const label =
+    mode === "signup" ? "Sign up with Google" : "Sign in with Google";
 
-  const handleSignIn = () => {
+  const handleClick = () => {
     setIsRedirecting(true);
     window.location.href = getGoogleLoginUrl();
   };
@@ -23,7 +29,7 @@ export function GoogleSignInButton({ className }: GoogleSignInButtonProps) {
       type="button"
       variant="outline"
       className={className}
-      onClick={handleSignIn}
+      onClick={handleClick}
       disabled={isRedirecting}
     >
       {isRedirecting ? (
@@ -48,7 +54,7 @@ export function GoogleSignInButton({ className }: GoogleSignInButtonProps) {
           />
         </svg>
       )}
-      Sign in with Google
+      {label}
     </Button>
   );
 }
