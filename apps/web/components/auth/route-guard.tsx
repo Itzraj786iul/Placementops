@@ -26,7 +26,11 @@ export function RouteGuard({ children }: RouteGuardProps) {
   React.useEffect(() => {
     if (isLoading) return;
 
-    if (pathname === "/login" && isAuthenticated && user) {
+    if (
+      (pathname === "/login" || pathname === "/signup") &&
+      isAuthenticated &&
+      user
+    ) {
       router.replace(getWorkspacePathForUser(user));
       return;
     }
