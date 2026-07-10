@@ -1,0 +1,206 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as React from "react";
+import { useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/features/student-onboarding/components/form-field";
+import { SectionCard } from "@/features/student-onboarding/components/section-card";
+import { StepSkeleton } from "@/features/student-onboarding/components/step-skeleton";
+import { EDUCATION_TYPE_LABELS } from "@/features/student-onboarding/constants";
+import { useOnboarding } from "@/features/student-onboarding/context/onboarding-context";
+import {
+  useInvalidateStudentQueries,
+  useStudentOnboardingData,
+} from "@/features/student-onboarding/hooks/use-student-data";
+import {
+  createEducation,
+  deleteEducation,
+  updateEducation,
+} from "@/features/student-onboarding/api/student-client";
+import {
+  educationRecordSchema,
+  type EducationRecordValues,
+} from "@/features/student-onboarding/schemas/onboarding-schemas";
+import type {
+  EducationRecord,
+  EducationType,
+} from "@/features/student-onboarding/types";
+
+const EDUCATION_TYPES: EducationType[] = [
+  "SECONDARY",
+  "HIGHER_SECONDARY",
+  "DIPLOMA",
+  "UNDERGRADUATE",
+];
+
+export function EducationStep() {
+  const { profileId, isReadOnly } = useOnboarding();
+  const { education } = useStudentOnboardingData(profileId);
+  const { invalidateAll } = useInvalidateStudentQueries();
+  const [editingType, setEditingType] = React.useState<EducationType | null>(
+    null,
+  );
+
+  if (education.isLoading) return <StepSkeleton />;
+
+  return (
+    <SectionCard
+      title="Education History"
+      description="Add your academic qualifications."
+    >
+      <div className="grid gap-4">
+        {EDUCATION_TYPES.map((type) => {
+          const record = education.data?.find((r) => r.education_type === type);
+          return (
+            <EducationTypeCard
+              key={type}
+              type={type}
+              record={record}
+              isReadOnly={isReadOnly}
+              isEditing={editingType === type}
+              onEdit={() => setEditingType(type)}
+              onCancel={() => setEditingType(null)}
+              onSaved={async () => {
+                setEditingType(null);
+                await invalidateAll(profileId);
+              }}
+            />
+          );
+        })}
+      </div>
+    </SectionCard>
+  );
+}
+
+function EducationTypeCard({
+  type,
+  record,
+  isReadOnly,
+  isEditing,
+  onEdit,
+  onCancel,
+  onSaved,
+}: {
+  type: EducationType;
+  record?: EducationRecord;
+  isReadOnly: boolean;
+  isEditing: boolean;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { profileId } = useOnboarding();
+  const form = useForm<EducationRecordValues>({
+    resolver: zodResolver(educationRecordSchema),
+    defaultValues: {
+      education_type: type,
+      institution: "",
+      board: "",
+      passing_year: new Date().getFullYear(),
+      percentage_or_cgpa: "",
+    },
+  });
+
+  React.useEffect(() => {
+    if (record) {
+      form.reset({
+        education_type: record.education_type,
+        institution: record.institution,
+        board: record.board,
+        passing_year: record.passing_year,
+        percentage_or_cgpa: record.percentage_or_cgpa,
+      });
+    }
+  }, [record, form]);
+
+  const onSubmit = form.handleSubmit(async (data) => {
+    if (record) {
+      await updateEducation(profileId, record.id, data);
+    } else {
+      await createEducation(profileId, data);
+    }
+    await onSaved();
+  });
+
+  const handleDelete = async () => {
+    if (!record) return;
+    await deleteEducation(profileId, record.id);
+    await onSaved();
+  };
+
+  return (
+    <div className="rounded-lg border p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h4 className="font-medium">{EDUCATION_TYPE_LABELS[type]}</h4>
+        {!isReadOnly && !isEditing && (
+          <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+            {record ? "Edit" : "Add"}
+          </Button>
+        )}
+      </div>
+      {record && !isEditing ? (
+        <div className="text-muted-foreground space-y-1 text-sm">
+          <p>{record.institution}</p>
+          <p>
+            {record.board} · {record.passing_year} · {record.percentage_or_cgpa}
+          </p>
+        </div>
+      ) : !isEditing ? (
+        <p className="text-muted-foreground text-sm">No record added yet.</p>
+      ) : null}
+      {isEditing && (
+        <form onSubmit={onSubmit} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <input type="hidden" {...form.register("education_type")} />
+          <FormField
+            label="Institution"
+            error={form.formState.errors.institution?.message}
+          >
+            <Input {...form.register("institution")} />
+          </FormField>
+          <FormField label="Board" error={form.formState.errors.board?.message}>
+            <Input {...form.register("board")} />
+          </FormField>
+          <FormField
+            label="Passing Year"
+            error={form.formState.errors.passing_year?.message}
+          >
+            <Input type="number" {...form.register("passing_year")} />
+          </FormField>
+          <FormField
+            label="Percentage / CGPA"
+            error={form.formState.errors.percentage_or_cgpa?.message}
+          >
+            <Input {...form.register("percentage_or_cgpa")} />
+          </FormField>
+          <div className="flex gap-2 sm:col-span-2">
+            <Button type="submit" size="sm">
+              Save
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+            {record && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                onClick={handleDelete}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}

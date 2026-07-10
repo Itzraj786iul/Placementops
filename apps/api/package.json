@@ -1,0 +1,10 @@
+{
+  "name": "@placementos/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "python main.py",
+    "lint": "echo 'Python lint configured in CI'",
+    "build": "echo 'API has no build step'"
+  }
+}

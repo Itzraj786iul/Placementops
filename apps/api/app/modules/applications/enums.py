@@ -1,0 +1,21 @@
+import enum
+
+
+class ApplicationStatus(str, enum.Enum):
+    APPLIED = "APPLIED"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    SHORTLISTED = "SHORTLISTED"
+    ASSESSMENT = "ASSESSMENT"
+    INTERVIEW = "INTERVIEW"
+    SELECTED = "SELECTED"
+    OFFER_RELEASED = "OFFER_RELEASED"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    WITHDRAWN = "WITHDRAWN"
+
+
+class QuestionType(str, enum.Enum):
+    TEXT = "TEXT"
+    BOOLEAN = "BOOLEAN"
+    NUMBER = "NUMBER"
+    CHOICE = "CHOICE"
