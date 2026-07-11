@@ -9,7 +9,11 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/features/student-onboarding/components/form-field";
 import { SectionCard } from "@/features/student-onboarding/components/section-card";
 import { StepSkeleton } from "@/features/student-onboarding/components/step-skeleton";
-import { EDUCATION_TYPE_LABELS } from "@/features/student-onboarding/constants";
+import {
+  EDUCATION_TYPE_LABELS,
+  NITRR_INSTITUTION_NAME,
+  ONBOARDING_EDUCATION_TYPES,
+} from "@/features/student-onboarding/constants";
 import { useOnboarding } from "@/features/student-onboarding/context/onboarding-context";
 import {
   useInvalidateStudentQueries,
@@ -29,12 +33,13 @@ import type {
   EducationType,
 } from "@/features/student-onboarding/types";
 
-const EDUCATION_TYPES: EducationType[] = [
-  "SECONDARY",
-  "HIGHER_SECONDARY",
-  "DIPLOMA",
-  "UNDERGRADUATE",
-];
+function requiresBoard(type: EducationType): boolean {
+  return type === "SECONDARY" || type === "HIGHER_SECONDARY";
+}
+
+function defaultInstitution(type: EducationType): string {
+  return type === "UNDERGRADUATE" ? NITRR_INSTITUTION_NAME : "";
+}
 
 export function EducationStep() {
   const { profileId, isReadOnly } = useOnboarding();
@@ -49,10 +54,10 @@ export function EducationStep() {
   return (
     <SectionCard
       title="Education History"
-      description="Add your academic qualifications."
+      description="Add your 10th, 12th, and undergraduate details."
     >
       <div className="grid gap-4">
-        {EDUCATION_TYPES.map((type) => {
+        {ONBOARDING_EDUCATION_TYPES.map((type) => {
           const record = education.data?.find((r) => r.education_type === type);
           return (
             <EducationTypeCard
@@ -93,11 +98,12 @@ function EducationTypeCard({
   onSaved: () => Promise<void>;
 }) {
   const { profileId } = useOnboarding();
+  const showBoard = requiresBoard(type);
   const form = useForm<EducationRecordValues>({
     resolver: zodResolver(educationRecordSchema),
     defaultValues: {
       education_type: type,
-      institution: "",
+      institution: defaultInstitution(type),
       board: "",
       passing_year: new Date().getFullYear(),
       percentage_or_cgpa: "",
@@ -113,14 +119,27 @@ function EducationTypeCard({
         passing_year: record.passing_year,
         percentage_or_cgpa: record.percentage_or_cgpa,
       });
+      return;
     }
-  }, [record, form]);
+    form.reset({
+      education_type: type,
+      institution: defaultInstitution(type),
+      board: "",
+      passing_year: new Date().getFullYear(),
+      percentage_or_cgpa: "",
+    });
+  }, [record, form, type]);
 
   const onSubmit = form.handleSubmit(async (data) => {
+    const payload = {
+      ...data,
+      // Board is school-exam only; API still requires a non-empty string.
+      board: showBoard ? data.board!.trim() : "N/A",
+    };
     if (record) {
-      await updateEducation(profileId, record.id, data);
+      await updateEducation(profileId, record.id, payload);
     } else {
-      await createEducation(profileId, data);
+      await createEducation(profileId, payload);
     }
     await onSaved();
   });
@@ -145,7 +164,10 @@ function EducationTypeCard({
         <div className="text-muted-foreground space-y-1 text-sm">
           <p>{record.institution}</p>
           <p>
-            {record.board} · {record.passing_year} · {record.percentage_or_cgpa}
+            {showBoard && record.board && record.board !== "N/A"
+              ? `${record.board} · `
+              : ""}
+            {record.passing_year} · {record.percentage_or_cgpa}
           </p>
         </div>
       ) : !isEditing ? (
@@ -155,14 +177,22 @@ function EducationTypeCard({
         <form onSubmit={onSubmit} className="mt-4 grid gap-3 sm:grid-cols-2">
           <input type="hidden" {...form.register("education_type")} />
           <FormField
-            label="Institution"
+            label={type === "UNDERGRADUATE" ? "Institute" : "Institution"}
             error={form.formState.errors.institution?.message}
           >
             <Input {...form.register("institution")} />
           </FormField>
-          <FormField label="Board" error={form.formState.errors.board?.message}>
-            <Input {...form.register("board")} />
-          </FormField>
+          {showBoard ? (
+            <FormField
+              label="Board"
+              error={form.formState.errors.board?.message}
+            >
+              <Input
+                placeholder="e.g. CBSE, State Board"
+                {...form.register("board")}
+              />
+            </FormField>
+          ) : null}
           <FormField
             label="Passing Year"
             error={form.formState.errors.passing_year?.message}
@@ -170,7 +200,7 @@ function EducationTypeCard({
             <Input type="number" {...form.register("passing_year")} />
           </FormField>
           <FormField
-            label="Percentage / CGPA"
+            label={type === "UNDERGRADUATE" ? "CGPA" : "Percentage / CGPA"}
             error={form.formState.errors.percentage_or_cgpa?.message}
           >
             <Input {...form.register("percentage_or_cgpa")} />

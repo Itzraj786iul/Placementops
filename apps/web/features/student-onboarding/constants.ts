@@ -14,11 +14,20 @@ export const ONBOARDING_STEPS = [
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number]["id"];
 
 export const EDUCATION_TYPE_LABELS: Record<string, string> = {
-  SECONDARY: "Secondary",
-  HIGHER_SECONDARY: "Higher Secondary",
+  SECONDARY: "Secondary (10th)",
+  HIGHER_SECONDARY: "Higher Secondary (12th)",
   DIPLOMA: "Diploma",
   UNDERGRADUATE: "Undergraduate",
 };
+
+/** Levels students fill during onboarding (Diploma is not used at NIT Raipur). */
+export const ONBOARDING_EDUCATION_TYPES = [
+  "SECONDARY",
+  "HIGHER_SECONDARY",
+  "UNDERGRADUATE",
+] as const;
+
+export const NITRR_INSTITUTION_NAME = "National Institute of Technology Raipur";
 
 export const REQUIRED_DOCUMENT_TYPES = [
   "PHOTO",

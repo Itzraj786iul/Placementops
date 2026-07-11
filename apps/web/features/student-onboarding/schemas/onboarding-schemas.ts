@@ -68,16 +68,28 @@ export const academicInfoSchema = z.object({
   total_history_backlogs: z.coerce.number().min(0, "Cannot be negative"),
 });
 
-export const educationRecordSchema = z.object({
-  education_type: educationTypeSchema,
-  institution: z.string().min(1, "Institution is required").max(255),
-  board: z.string().min(1, "Board is required").max(255),
-  passing_year: z.coerce
-    .number()
-    .min(1980, "Enter a valid year")
-    .max(2100, "Enter a valid year"),
-  percentage_or_cgpa: z.string().min(1, "Result is required").max(20),
-});
+export const educationRecordSchema = z
+  .object({
+    education_type: educationTypeSchema,
+    institution: z.string().min(1, "Institution is required").max(255),
+    board: z.string().max(255).optional().or(z.literal("")),
+    passing_year: z.coerce
+      .number()
+      .min(1980, "Enter a valid year")
+      .max(2100, "Enter a valid year"),
+    percentage_or_cgpa: z.string().min(1, "Result is required").max(20),
+  })
+  .superRefine((data, ctx) => {
+    // Board applies to school exams (CBSE/state boards), not undergraduate.
+    if (data.education_type === "UNDERGRADUATE") return;
+    if (!data.board?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Board is required",
+        path: ["board"],
+      });
+    }
+  });
 
 export const resumeSchema = z.object({
   name: z.string().min(1, "Resume name is required").max(150),
