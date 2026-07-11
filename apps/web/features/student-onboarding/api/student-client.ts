@@ -39,12 +39,18 @@ export async function updateProfile(
     roll_number: string;
     registration_number: string;
     graduation_year: number;
-    profile_status: string;
   }>,
 ): Promise<StudentProfile> {
   return apiRequest<StudentProfile>(`/students/profiles/${profileId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
+  });
+}
+
+/** Owner-only: submit complete draft/rejected profile for placement review. */
+export async function submitMyProfile(): Promise<StudentProfile> {
+  return apiRequest<StudentProfile>("/students/profiles/me/submit", {
+    method: "POST",
   });
 }
 

@@ -246,3 +246,64 @@ def notify_offer_released_for_opportunity(
                 "Failed offer notification for application %s",
                 application.id,
             )
+
+
+def _staff_recipients(db: Session) -> list[User]:
+    from app.modules.users.models import Role, UserRole
+
+    stmt = (
+        select(User)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(Role.name.in_(("PLACEMENT_CELL", "PLACEMENT_CONVENER", "SUPER_ADMIN")))
+        .options(selectinload(User.roles))
+        .distinct()
+    )
+    return list(db.scalars(stmt).all())
+
+
+def notify_profile_submitted(db: Session, profile: StudentProfile) -> None:
+    """Notify placement staff when a student submits their profile for review."""
+    service = NotificationService(db)
+    personal = profile.personal_information
+    if personal is not None:
+        student_name = f"{personal.first_name} {personal.last_name}".strip()
+    else:
+        owner = _user_by_id(db, profile.user_id)
+        student_name = (
+            owner.display_name
+            if owner is not None
+            else profile.roll_number
+        )
+    action_url = _frontend_url("/workspace/convener")
+    context = {
+        "student_name": student_name or "Student",
+        "roll_number": profile.roll_number,
+        "action_url": action_url,
+    }
+
+    notified = 0
+    for recipient in _staff_recipients(db):
+        # Do not notify the submitting student if they somehow hold a staff role.
+        if recipient.id == profile.user_id:
+            continue
+        try:
+            service.notify(
+                recipient=recipient,
+                notification_type=NotificationType.PROFILE_SUBMITTED,
+                context=context,
+                entity_type=NotificationEntityType.STUDENT_PROFILE,
+                entity_id=profile.id,
+            )
+            notified += 1
+        except Exception:  # noqa: BLE001 — never block submit
+            logger.exception(
+                "Failed profile-submit notification for user %s",
+                recipient.id,
+            )
+
+    logger.info(
+        "Profile %s submitted: notified %s staff recipients",
+        profile.id,
+        notified,
+    )

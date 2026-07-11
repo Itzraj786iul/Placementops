@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { ReviewCard } from "@/features/student-onboarding/components/review-card";
@@ -17,7 +18,7 @@ import {
   useInvalidateStudentQueries,
   useStudentOnboardingData,
 } from "@/features/student-onboarding/hooks/use-student-data";
-import { updateProfile } from "@/features/student-onboarding/api/student-client";
+import { submitMyProfile } from "@/features/student-onboarding/api/student-client";
 import { getIncompleteSections } from "@/features/student-onboarding/utils/step-status";
 import { ApiError } from "@/lib/api-client";
 
@@ -45,20 +46,29 @@ export function ReviewStep() {
   };
 
   const incomplete = getIncompleteSections(sectionData);
-  const canSubmit = canSubmitProfile(completion) && !isReadOnly;
+  const isSubmittedForReview =
+    profile.profile_status === "SUBMITTED" ||
+    profile.profile_status === "UNDER_REVIEW";
+  const canSubmit =
+    canSubmitProfile(completion) &&
+    !isReadOnly &&
+    (profile.profile_status === "DRAFT" ||
+      profile.profile_status === "REJECTED");
 
   const handleSubmit = async () => {
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      await updateProfile(profileId, { profile_status: "SUBMITTED" });
+      await submitMyProfile();
       await invalidateProfile();
+      toast.success("Profile submitted for review");
     } catch (error) {
       const message =
         error instanceof ApiError
           ? error.message
           : "Unable to submit profile. Please try again.";
       setSubmitError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -73,6 +83,21 @@ export function ReviewStep() {
         <span className="text-muted-foreground text-sm">Profile status</span>
         <StatusBadge status={profile.profile_status} />
       </div>
+
+      {isSubmittedForReview && (
+        <div
+          className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-900 dark:bg-blue-950/40"
+          role="status"
+        >
+          <p className="font-medium text-blue-900 dark:text-blue-100">
+            Submitted for review
+          </p>
+          <p className="text-muted-foreground mt-1">
+            Your profile is with the Placement Cell / Convener. You will be able
+            to edit again if it is rejected.
+          </p>
+        </div>
+      )}
 
       {profile.profile_status === "REJECTED" &&
         data.verification.data?.remarks && (
@@ -160,10 +185,11 @@ export function ReviewStep() {
       </div>
 
       <div className="mt-8 rounded-lg border p-4">
-        {isProfileReadOnly(profile.profile_status) ? (
+        {isSubmittedForReview ? null : isProfileReadOnly(
+            profile.profile_status,
+          ) ? (
           <p className="text-muted-foreground text-sm">
-            Your profile has been submitted and is now read-only. You will be
-            able to edit again if it is rejected by the convener.
+            Your profile is verified and read-only.
           </p>
         ) : canSubmit ? (
           <div className="space-y-3">
@@ -186,16 +212,30 @@ export function ReviewStep() {
         ) : (
           <div className="space-y-2">
             <p className="text-sm font-medium">Submission blocked</p>
-            <p className="text-muted-foreground text-sm">
-              Complete all sections before submitting. Profile completion is{" "}
-              {completion}%.
-            </p>
-            {incomplete.length > 0 && (
-              <ul className="text-muted-foreground list-inside list-disc text-sm">
-                {incomplete.map((section) => (
-                  <li key={section}>{section}</li>
-                ))}
-              </ul>
+            {!canSubmitProfile(completion) ? (
+              <>
+                <p className="text-muted-foreground text-sm">
+                  Complete all sections before submitting. Profile completion is{" "}
+                  {completion}%.
+                </p>
+                {incomplete.length > 0 && (
+                  <ul className="text-muted-foreground list-inside list-disc text-sm">
+                    {incomplete.map((section) => (
+                      <li key={section}>{section}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Only draft or rejected profiles can be submitted for review.
+                Current status: {profile.profile_status}.
+              </p>
+            )}
+            {submitError && (
+              <p className="text-destructive text-sm" role="alert">
+                {submitError}
+              </p>
             )}
           </div>
         )}

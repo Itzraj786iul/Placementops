@@ -9,6 +9,7 @@ from app.modules.students.enums import ProfileStatus
 from app.modules.students.enums import DocumentType
 from app.modules.students.exceptions import (
     StudentConflictError,
+    StudentForbiddenError,
     StudentNotFoundError,
     StudentValidationError,
 )
@@ -138,6 +139,73 @@ class StudentService:
         profile = self.repository.get_profile_by_user_id(user.id)
         profile = ensure_profile_access(user, profile)
         return self._profile_response(profile)
+
+    def submit_my_profile(self, user: User) -> StudentProfileResponse:
+        """Owner-only action: DRAFT|REJECTED → SUBMITTED when profile is complete."""
+        owned = self.repository.get_profile_by_user_id(user.id)
+        if owned is None:
+            raise StudentNotFoundError()
+        if owned.user_id != user.id:
+            raise StudentForbiddenError("Only the profile owner can submit")
+
+        profile = self.repository.get_profile_by_id(owned.id)
+        if profile is None:
+            raise StudentNotFoundError()
+
+        self._refresh_completion(profile)
+        profile = self.repository.get_profile_by_id(profile.id)
+        if profile is None:
+            raise StudentNotFoundError()
+
+        if profile.profile_completion < 100:
+            raise StudentValidationError(
+                "Profile must be 100% complete before submission",
+            )
+
+        if profile.profile_status not in {
+            ProfileStatus.DRAFT,
+            ProfileStatus.REJECTED,
+        }:
+            raise StudentValidationError(
+                "Only draft or rejected profiles can be submitted for review",
+            )
+
+        old_values = snapshot_fields(profile, _PROFILE_AUDIT_FIELDS)
+        previous_status = profile.profile_status
+        profile.profile_status = ProfileStatus.SUBMITTED
+        profile.updated_at = utc_now()
+        self._refresh_completion(profile)
+
+        refreshed = self.repository.get_profile_by_id(profile.id)
+        record_audit(
+            self.db,
+            entity_type=AuditEntityType.STUDENT_PROFILE,
+            entity_id=profile.id,
+            action=AuditAction.UPDATE,
+            performed_by=user.id,
+            old_values=old_values,
+            new_values=snapshot_fields(
+                refreshed if refreshed is not None else profile,
+                _PROFILE_AUDIT_FIELDS,
+            ),
+            metadata={
+                "action": "submit",
+                "from_status": previous_status.value,
+                "to_status": ProfileStatus.SUBMITTED.value,
+            },
+        )
+
+        try:
+            from app.platform.notifications.triggers import notify_profile_submitted
+
+            loaded = self.repository.get_profile_by_id(profile.id)
+            if loaded is not None:
+                notify_profile_submitted(self.db, loaded)
+        except Exception:  # noqa: BLE001 — never block submit on notification failure
+            pass
+
+        self.db.commit()
+        return self._profile_response(self.repository.get_profile_by_id(profile.id))
 
     def get_profile(self, user: User, profile_id: uuid.UUID) -> StudentProfileResponse:
         profile = ensure_profile_access(

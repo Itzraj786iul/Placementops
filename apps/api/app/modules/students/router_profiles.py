@@ -71,6 +71,18 @@ def get_my_profile(
     return service.get_my_profile(current_user)
 
 
+@students_router.post(
+    "/profiles/me/submit",
+    response_model=StudentProfileResponse,
+)
+def submit_my_profile(
+    current_user: User = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service),
+) -> StudentProfileResponse:
+    """Student-only: submit own profile for placement review."""
+    return service.submit_my_profile(current_user)
+
+
 @students_router.get("/profiles/{profile_id}", response_model=StudentProfileResponse)
 def get_profile(
     profile_id: uuid.UUID,

@@ -133,6 +133,26 @@ _TEMPLATES: dict[NotificationType, dict[str, str]] = {
 """.strip(),
         "text": "Offer released for $opportunity_title.\nView: $action_url\n",
     },
+    NotificationType.PROFILE_SUBMITTED: {
+        "subject": "Student profile submitted: $student_name",
+        "title": "Student profile submitted for review",
+        "message": (
+            "$student_name ($roll_number) submitted their placement profile "
+            "for review."
+        ),
+        "html": """
+<html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111">
+  <h2>Student profile submitted</h2>
+  <p><strong>$student_name</strong> ($roll_number) submitted their placement
+  profile for review.</p>
+  <p><a href="$action_url">Open student workspace</a></p>
+</body></html>
+""".strip(),
+        "text": (
+            "Student profile submitted: $student_name ($roll_number)\n"
+            "Open: $action_url\n"
+        ),
+    },
 }
 
 
@@ -159,6 +179,8 @@ class TemplateService:
             "new_status",
             "interview_when",
             "interview_details",
+            "student_name",
+            "roll_number",
         ):
             safe.setdefault(key, "")
 
