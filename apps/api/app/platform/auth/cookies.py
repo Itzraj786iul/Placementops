@@ -4,15 +4,20 @@ from app.core.config import settings
 from app.platform.auth.schemas import TokenResponse
 
 
-def set_auth_cookies(response: Response, tokens: TokenResponse) -> None:
-    cookie_kwargs = {
+def _cookie_base_kwargs() -> dict:
+    kwargs: dict = {
         "httponly": True,
         "secure": settings.COOKIE_SECURE,
         "samesite": "lax",
         "path": "/",
     }
     if settings.COOKIE_DOMAIN:
-        cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
+        kwargs["domain"] = settings.COOKIE_DOMAIN
+    return kwargs
+
+
+def set_auth_cookies(response: Response, tokens: TokenResponse) -> None:
+    cookie_kwargs = _cookie_base_kwargs()
 
     response.set_cookie(
         key="access_token",
@@ -29,8 +34,7 @@ def set_auth_cookies(response: Response, tokens: TokenResponse) -> None:
 
 
 def clear_auth_cookies(response: Response) -> None:
-    cookie_kwargs = {"path": "/"}
-    if settings.COOKIE_DOMAIN:
-        cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
+    # Match set attributes so browsers clear Secure cookies on HTTPS.
+    cookie_kwargs = _cookie_base_kwargs()
     response.delete_cookie("access_token", **cookie_kwargs)
     response.delete_cookie("refresh_token", **cookie_kwargs)

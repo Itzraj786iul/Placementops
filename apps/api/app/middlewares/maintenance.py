@@ -9,6 +9,7 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.core.config import settings
 from app.modules.admin.maintenance_state import (
     get_maintenance_state,
     user_bypasses_maintenance,
@@ -21,13 +22,16 @@ WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 ALWAYS_ALLOW_PREFIXES = (
     "/health",
     "/api/v1/health",
-    "/docs",
-    "/redoc",
-    "/openapi.json",
     "/api/v1/auth/google/callback",
     "/api/v1/auth/google/login",
     "/api/v1/maintenance",
     "/api/v1/admin",
+)
+
+_DOCS_PREFIXES = (
+    "/docs",
+    "/redoc",
+    "/openapi.json",
 )
 
 
@@ -87,6 +91,11 @@ def _is_always_allowed(path: str) -> bool:
     for prefix in ALWAYS_ALLOW_PREFIXES:
         if path == prefix or path.startswith(prefix + "/"):
             return True
+    # Only bypass maintenance for docs when OpenAPI is enabled.
+    if settings.api_docs_enabled:
+        for prefix in _DOCS_PREFIXES:
+            if path == prefix or path.startswith(prefix + "/"):
+                return True
     return False
 
 

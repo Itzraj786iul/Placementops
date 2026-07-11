@@ -21,6 +21,10 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
+      - key: ENVIRONMENT
+        value: "production"
+      - key: ENABLE_API_DOCS
+        value: "false"
       - key: COOKIE_SECURE
         value: "true"
       - key: ENABLE_DEV_LOGIN

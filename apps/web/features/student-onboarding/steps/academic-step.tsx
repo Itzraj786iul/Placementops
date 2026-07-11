@@ -49,10 +49,8 @@ export function AcademicStep() {
     hydrated.current = true;
   }, [academic.data, reset, form.formState.isDirty]);
 
-  const { status, retrySave } = useStepAutosave(
-    form,
-    profileId,
-    async (data) => {
+  const saveAcademic = React.useCallback(
+    async (data: AcademicInfoValues) => {
       await saveAcademicInfo(profileId, {
         current_cgpa: String(data.current_cgpa),
         semester: data.semester,
@@ -60,6 +58,13 @@ export function AcademicStep() {
         total_history_backlogs: data.total_history_backlogs,
       });
     },
+    [profileId],
+  );
+
+  const { status, retrySave } = useStepAutosave(
+    form,
+    profileId,
+    saveAcademic,
     !isReadOnly,
   );
 

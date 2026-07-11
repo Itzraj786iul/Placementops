@@ -59,22 +59,27 @@ Or let the Render start command run migrations (see below).
 
 ### Environment variables (Render)
 
-| Variable                | Value / notes                                                            |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `DATABASE_URL`          | Neon connection string                                                   |
-| `JWT_SECRET_KEY`        | Long random secret (never use the code default)                          |
-| `COOKIE_SECURE`         | `true`                                                                   |
-| `ENABLE_DEV_LOGIN`      | `false` for real prod; `true` only for demos                             |
-| `FRONTEND_URL`          | Your Vercel URL, e.g. `https://placementops.vercel.app`                  |
-| `CORS_ORIGINS`          | Same as `FRONTEND_URL`                                                   |
-| `GOOGLE_CLIENT_ID`      | Google OAuth client ID (if using Google login)                           |
-| `GOOGLE_CLIENT_SECRET`  | Google OAuth secret                                                      |
-| `GOOGLE_REDIRECT_URI`   | `https://<your-render-service>.onrender.com/api/v1/auth/google/callback` |
-| `CLOUDINARY_CLOUD_NAME` | Required for file uploads (resumes, documents, images)                   |
-| `CLOUDINARY_API_KEY`    | From Cloudinary dashboard → API Keys                                     |
-| `CLOUDINARY_API_SECRET` | Keep secret; never commit                                                |
+| Variable                | Value / notes                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `DATABASE_URL`          | Neon connection string                                                         |
+| `ENVIRONMENT`           | `production` (required for RC hardening — disables docs, enforces flags)       |
+| `JWT_SECRET_KEY`        | Long random secret (never use the code default; ≥32 chars)                     |
+| `COOKIE_SECURE`         | `true` (required when `ENVIRONMENT=production`)                                |
+| `ENABLE_DEV_LOGIN`      | `false` (required when `ENVIRONMENT=production`; API will not start otherwise) |
+| `ENABLE_API_DOCS`       | `false` in production (Swagger/ReDoc/OpenAPI disabled)                         |
+| `FRONTEND_URL`          | Your Vercel URL, e.g. `https://placementops.vercel.app`                        |
+| `CORS_ORIGINS`          | Same as `FRONTEND_URL`                                                         |
+| `GOOGLE_CLIENT_ID`      | Google OAuth client ID (if using Google login)                                 |
+| `GOOGLE_CLIENT_SECRET`  | Google OAuth secret                                                            |
+| `GOOGLE_REDIRECT_URI`   | `https://<your-render-service>.onrender.com/api/v1/auth/google/callback`       |
+| `CLOUDINARY_CLOUD_NAME` | Required for file uploads (resumes, documents, images)                         |
+| `CLOUDINARY_API_KEY`    | From Cloudinary dashboard → API Keys                                           |
+| `CLOUDINARY_API_SECRET` | Keep secret; never commit                                                      |
 
-After deploy, open: `https://<service>.onrender.com/health` → should return `{"status":"ok"}`.
+The API **refuses to start** in production if `ENABLE_DEV_LOGIN=true`, `COOKIE_SECURE=false`, or `JWT_SECRET_KEY` is missing/weak/default.
+
+After deploy, open: `https://<service>.onrender.com/health` → should return `{"status":"ok"}`.  
+Confirm `/docs` and `/redoc` return **404** in production.
 
 ---
 
@@ -221,3 +226,19 @@ GitHub Actions (`.github/workflows/ci.yml`) still runs lint, typecheck, build, a
 | Cloudinary | Yes   | Transformations / storage quota   |
 
 For a college demo or small pilot this stack is enough. For a live placement week, upgrade Render (always-on) and Neon compute so the API does not sleep mid-session.
+
+---
+
+## Production security checklist (RC)
+
+Before a live placement season:
+
+- [ ] `ENVIRONMENT=production`
+- [ ] `ENABLE_DEV_LOGIN=false` (API will not start otherwise)
+- [ ] `COOKIE_SECURE=true`
+- [ ] Strong `JWT_SECRET_KEY` (≥32 characters, not the example default)
+- [ ] `ENABLE_API_DOCS=false` (or omit — docs auto-disable in production)
+- [ ] Frontend: `NEXT_PUBLIC_ENABLE_DEV_LOGIN` unset or `false`
+- [ ] Confirm `/docs` and `/openapi.json` return 404
+- [ ] Google OAuth redirect URI matches the live API URL
+- [ ] Cloudinary credentials set (uploads return 503 without them)

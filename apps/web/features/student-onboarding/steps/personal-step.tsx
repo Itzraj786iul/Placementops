@@ -79,10 +79,8 @@ export function PersonalStep() {
     hydratedKey.current = key;
   }, [personal.data, reset, form.formState.isDirty]);
 
-  const { status, retrySave } = useStepAutosave(
-    form,
-    profileId,
-    async (data) => {
+  const savePersonal = React.useCallback(
+    async (data: PersonalInfoValues) => {
       await savePersonalInfo(profileId, {
         ...data,
         alternate_phone: nullifyEmpty(data.alternate_phone),
@@ -90,6 +88,13 @@ export function PersonalStep() {
         photo_url: nullifyEmpty(data.photo_url),
       });
     },
+    [profileId],
+  );
+
+  const { status, retrySave } = useStepAutosave(
+    form,
+    profileId,
+    savePersonal,
     !isReadOnly,
   );
 
@@ -144,7 +149,7 @@ export function PersonalStep() {
                   );
                   setValue("photo_url", result.photo_url, {
                     shouldDirty: true,
-                    shouldValidate: true,
+                    shouldValidate: false,
                   });
                   toast.success("Photo uploaded");
                 }}

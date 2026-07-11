@@ -10,32 +10,42 @@ import {
 import { useAutosave } from "@/features/student-onboarding/hooks/use-autosave";
 import { useInvalidateStudentQueries } from "@/features/student-onboarding/hooks/use-student-data";
 
+const VALIDATE_DEBOUNCE_MS = 400;
+
 /**
  * Debounced autosave for onboarding steps.
- * Avoids invalidate+reset loops that freeze inputs while typing.
+ * Stabilized against render loops that freeze inputs while typing.
  */
 export function useStepAutosave<T extends FieldValues>(
   form: UseFormReturn<T>,
-  profileId: string,
+  _profileId: string,
   saveFn: (data: T) => Promise<void>,
   enabled: boolean,
 ) {
   const { invalidateProfile } = useInvalidateStudentQueries();
   const saveFnRef = React.useRef(saveFn);
   saveFnRef.current = saveFn;
+  const formRef = React.useRef(form);
+  formRef.current = form;
+  const invalidateRef = React.useRef(invalidateProfile);
+  invalidateRef.current = invalidateProfile;
 
-  const { status, save, retry } = useAutosave<T>(async (data) => {
+  const persist = React.useCallback(async (data: T) => {
     await saveFnRef.current(data);
-    // Clear dirty without clobbering in-progress keystrokes from a refetch.
-    form.reset(data);
-    // Refresh completion % only — do not refetch the active step form data.
-    await invalidateProfile();
-  });
+    // Keep whatever the user typed during the request; update defaults to saved data.
+    formRef.current.reset(data, { keepValues: true });
+    await invalidateRef.current();
+  }, []);
+
+  const { status, save, retry } = useAutosave<T>(persist);
+  const saveRef = React.useRef(save);
+  saveRef.current = save;
+  const retryRef = React.useRef(retry);
+  retryRef.current = retry;
 
   const values = useWatch({ control: form.control });
   const isDirty = form.formState.isDirty;
   const isFirstRender = React.useRef(true);
-  const trigger = form.trigger;
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -45,16 +55,23 @@ export function useStepAutosave<T extends FieldValues>(
     }
     if (!isDirty) return;
 
-    void trigger().then((valid) => {
-      if (valid) save(values as T);
-    });
-  }, [values, enabled, isDirty, save, trigger]);
+    const handle = setTimeout(() => {
+      void formRef.current.trigger().then((valid) => {
+        if (!valid) return;
+        // Always read latest values — effect closure can be stale after await.
+        saveRef.current(formRef.current.getValues());
+      });
+    }, VALIDATE_DEBOUNCE_MS);
+
+    return () => clearTimeout(handle);
+    // Intentionally omit save/trigger — refs keep them current without re-firing.
+  }, [values, enabled, isDirty]);
 
   const retrySave = React.useCallback(() => {
-    void trigger().then((valid) => {
-      if (valid) retry(values as T);
+    void formRef.current.trigger().then((valid) => {
+      if (valid) retryRef.current(formRef.current.getValues());
     });
-  }, [trigger, retry, values]);
+  }, []);
 
   return { status, retrySave };
 }

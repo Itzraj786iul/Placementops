@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -54,11 +53,7 @@ def _google_oauth_env_configured() -> bool:
 
 
 def _environment_mode() -> str:
-    if settings.ENABLE_DEV_LOGIN:
-        return "development"
-    if settings.COOKIE_SECURE:
-        return "production"
-    return os.getenv("ENVIRONMENT", "local").lower() or "local"
+    return settings.ENVIRONMENT
 
 
 class AdminSettingsService:

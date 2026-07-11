@@ -33,15 +33,13 @@ from app.platform.notifications.models import Notification
 from app.platform.notifications.template_service import TemplateService
 from app.utils.datetime import utc_now
 
+# Re-export default for health checks (keep in sync with config).
+_DEFAULT_JWT_SECRET = "change-me-in-production-use-a-long-random-secret"
 _PROCESS_STARTED_AT = time.monotonic()
 
 
 def _environment_mode() -> str:
-    if settings.ENABLE_DEV_LOGIN:
-        return "development"
-    if settings.COOKIE_SECURE:
-        return "production"
-    return (os.getenv("ENVIRONMENT") or "local").lower()
+    return settings.ENVIRONMENT
 
 
 def _git_commit() -> str | None:
@@ -74,7 +72,7 @@ def _google_oauth_configured() -> bool:
 
 def _jwt_status() -> ComponentStatus:
     secret = settings.JWT_SECRET_KEY.strip()
-    if not secret or secret == "change-me-in-production-use-a-long-random-secret":
+    if not secret or secret == _DEFAULT_JWT_SECRET:
         return "warning"
     if len(secret) < 32:
         return "warning"
@@ -361,6 +359,9 @@ class AdminHealthService:
 
         overall = _worst(*statuses)
         detail_parts = []
+        if settings.ENABLE_DEV_LOGIN:
+            detail_parts.append("ENABLE_DEV_LOGIN is on — disable for live placement")
+            overall = _worst(overall, "warning")
         if not oauth_configured:
             detail_parts.append("Google OAuth env not fully configured")
         if jwt_status != "healthy":

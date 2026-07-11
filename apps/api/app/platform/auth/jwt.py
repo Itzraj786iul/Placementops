@@ -10,9 +10,11 @@ from app.utils.datetime import utc_now
 
 
 def create_access_token(user_id: uuid.UUID) -> str:
-    expires_at = utc_now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    now = utc_now()
+    expires_at = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
         "sub": str(user_id),
+        "iat": now,
         "exp": expires_at,
         "type": "access",
     }
@@ -25,9 +27,11 @@ def create_access_token(user_id: uuid.UUID) -> str:
 
 def create_refresh_token(user_id: uuid.UUID) -> tuple[str, str]:
     jti = secrets.token_urlsafe(32)
-    expires_at = utc_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    now = utc_now()
+    expires_at = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     payload = {
         "sub": str(user_id),
+        "iat": now,
         "exp": expires_at,
         "type": "refresh",
         "jti": jti,
@@ -46,10 +50,23 @@ def decode_token(token: str, expected_type: str) -> dict:
             token,
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
+            options={
+                "require": ["exp", "sub", "type"],
+                "verify_exp": True,
+            },
         )
     except jwt.PyJWTError as exc:
         raise UnauthorizedError("Invalid authentication token") from exc
 
     if payload.get("type") != expected_type:
         raise UnauthorizedError("Invalid authentication token")
+
+    try:
+        uuid.UUID(str(payload["sub"]))
+    except (ValueError, TypeError) as exc:
+        raise UnauthorizedError("Invalid authentication token") from exc
+
+    if expected_type == "refresh" and not payload.get("jti"):
+        raise UnauthorizedError("Invalid authentication token")
+
     return payload

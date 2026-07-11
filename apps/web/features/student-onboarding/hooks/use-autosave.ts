@@ -15,6 +15,8 @@ export function useAutosave<T>(
   const savedTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const saveFnRef = React.useRef(saveFn);
+  saveFnRef.current = saveFn;
 
   const clearTimers = React.useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -23,25 +25,28 @@ export function useAutosave<T>(
 
   React.useEffect(() => clearTimers, [clearTimers]);
 
+  // Keep `save` identity stable — callers often put it in effect deps.
   const save = React.useCallback(
     (data: T) => {
       clearTimers();
-      timeoutRef.current = setTimeout(async () => {
-        setStatus("saving");
-        try {
-          await saveFn(data);
-          setStatus("saved");
-          savedTimeoutRef.current = setTimeout(() => setStatus("idle"), 2000);
-        } catch (error) {
-          if (isOfflineError(error)) {
-            setStatus("offline");
-            return;
+      timeoutRef.current = setTimeout(() => {
+        void (async () => {
+          setStatus("saving");
+          try {
+            await saveFnRef.current(data);
+            setStatus("saved");
+            savedTimeoutRef.current = setTimeout(() => setStatus("idle"), 2000);
+          } catch (error) {
+            if (isOfflineError(error)) {
+              setStatus("offline");
+              return;
+            }
+            setStatus("error");
           }
-          setStatus("error");
-        }
+        })();
       }, debounceMs);
     },
-    [clearTimers, debounceMs, saveFn],
+    [clearTimers, debounceMs],
   );
 
   const retry = React.useCallback(
@@ -50,7 +55,7 @@ export function useAutosave<T>(
       void (async () => {
         setStatus("saving");
         try {
-          await saveFn(data);
+          await saveFnRef.current(data);
           setStatus("saved");
           savedTimeoutRef.current = setTimeout(() => setStatus("idle"), 2000);
         } catch (error) {
@@ -62,7 +67,7 @@ export function useAutosave<T>(
         }
       })();
     },
-    [clearTimers, saveFn],
+    [clearTimers],
   );
 
   return {

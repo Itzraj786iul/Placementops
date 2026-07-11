@@ -48,4 +48,25 @@ DANGEROUS_EXTENSIONS = {
     "html",
     "htm",
     "svg",
+    "vbs",
+    "vbe",
+    "wsf",
+    "hta",
+    "cpl",
+    "dll",
+    "so",
+    "py",
+    "rb",
+    "pl",
 }
+
+# Leading magic bytes used to reject renamed malware (extension spoofing).
+CONTENT_SIGNATURES: dict[str, tuple[bytes, ...]] = {
+    "pdf": (b"%PDF",),
+    "png": (b"\x89PNG\r\n\x1a\n",),
+    "jpg": (b"\xff\xd8\xff",),
+    "jpeg": (b"\xff\xd8\xff",),
+    "docx": (b"PK\x03\x04",),  # OOXML is a ZIP container
+    "doc": (b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1",),  # OLE compound
+}
+

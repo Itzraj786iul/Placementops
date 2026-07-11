@@ -11,11 +11,18 @@ from app.platform.exceptions import ApplicationError
 
 
 def create_app() -> FastAPI:
+    settings.assert_production_security()
+
+    docs_url = "/docs" if settings.api_docs_enabled else None
+    redoc_url = "/redoc" if settings.api_docs_enabled else None
+    openapi_url = "/openapi.json" if settings.api_docs_enabled else None
+
     application = FastAPI(
         title=settings.PROJECT_NAME,
         version=settings.VERSION,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
     )
 
     application.add_middleware(

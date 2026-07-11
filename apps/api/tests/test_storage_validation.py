@@ -41,7 +41,7 @@ def test_reject_wrong_type_for_resume() -> None:
 
 
 def test_reject_oversized_image() -> None:
-    oversized = b"x" * (5 * 1024 * 1024 + 1)
+    oversized = b"\xff\xd8\xff" + (b"x" * (5 * 1024 * 1024))
     try:
         validate_upload(
             filename="big.jpg",
@@ -52,6 +52,32 @@ def test_reject_oversized_image() -> None:
         raise AssertionError("expected StorageValidationError")
     except StorageValidationError as exc:
         assert "maximum size" in str(exc)
+
+
+def test_reject_content_signature_mismatch() -> None:
+    try:
+        validate_upload(
+            filename="fake.pdf",
+            content=b"not-a-pdf",
+            content_type="application/pdf",
+            category=UploadCategory.RESUME,
+        )
+        raise AssertionError("expected StorageValidationError")
+    except StorageValidationError as exc:
+        assert "content does not match" in str(exc)
+
+
+def test_reject_script_extension() -> None:
+    try:
+        validate_upload(
+            filename="payload.vbs",
+            content=b"msgbox",
+            content_type="text/plain",
+            category=UploadCategory.DOCUMENT,
+        )
+        raise AssertionError("expected StorageValidationError")
+    except StorageValidationError as exc:
+        assert "not allowed" in str(exc)
 
 
 def test_reject_mime_mismatch() -> None:

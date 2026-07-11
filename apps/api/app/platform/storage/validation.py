@@ -9,6 +9,7 @@ from app.platform.storage.types import (
     ALLOWED_EXTENSIONS,
     CATEGORY_EXTENSIONS,
     CATEGORY_MAX_BYTES,
+    CONTENT_SIGNATURES,
     DANGEROUS_EXTENSIONS,
     UploadCategory,
 )
@@ -28,6 +29,16 @@ def _extension(filename: str) -> str:
     if "." not in name:
         return ""
     return name.rsplit(".", 1)[-1].lower().strip()
+
+
+def _assert_content_signature(extension: str, content: bytes) -> None:
+    signatures = CONTENT_SIGNATURES.get(extension)
+    if not signatures:
+        return
+    if not any(content.startswith(sig) for sig in signatures):
+        raise StorageValidationError(
+            f"File content does not match extension .{extension}",
+        )
 
 
 def validate_upload(
@@ -65,6 +76,8 @@ def validate_upload(
         raise StorageValidationError(
             f"File exceeds maximum size of {mb:g} MB for {category.value.lower()}",
         )
+
+    _assert_content_signature(ext, content)
 
     declared = (content_type or "").split(";")[0].strip().lower()
     allowed_mimes = ALLOWED_EXTENSIONS[ext]

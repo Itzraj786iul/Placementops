@@ -1,4 +1,7 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_JWT_SECRET = "change-me-in-production-use-a-long-random-secret"
 
 
 class Settings(BaseSettings):
@@ -15,6 +18,9 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     API_RELOAD: bool = True
 
+    # local | development | staging | production
+    ENVIRONMENT: str = "local"
+
     DATABASE_URL: str = (
         "postgresql://placementos:placementos@localhost:5432/placementos"
     )
@@ -29,7 +35,7 @@ class Settings(BaseSettings):
 
     ALLOWED_EMAIL_DOMAIN: str = "nitrr.ac.in"
 
-    JWT_SECRET_KEY: str = "change-me-in-production-use-a-long-random-secret"
+    JWT_SECRET_KEY: str = _DEFAULT_JWT_SECRET
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -39,6 +45,8 @@ class Settings(BaseSettings):
     COOKIE_DOMAIN: str | None = None
 
     ENABLE_DEV_LOGIN: bool = False
+    # None = auto (enabled only when not production)
+    ENABLE_API_DOCS: bool | None = None
 
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
@@ -47,6 +55,23 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "PlacementOS <onboarding@resend.dev>"
     EMAIL_PROVIDER: str = "resend"
+
+    @field_validator("ENVIRONMENT", mode="before")
+    @classmethod
+    def normalize_environment(cls, value: object) -> str:
+        if value is None or value == "":
+            return "local"
+        return str(value).strip().lower()
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == "production"
+
+    @property
+    def api_docs_enabled(self) -> bool:
+        if self.ENABLE_API_DOCS is not None:
+            return self.ENABLE_API_DOCS
+        return not self.is_production
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -73,6 +98,24 @@ class Settings(BaseSettings):
             and self.EMAIL_FROM.strip()
             and "your-resend" not in self.RESEND_API_KEY.lower()
         )
+
+    def assert_production_security(self) -> None:
+        """Fail fast when production env is unsafe for a live placement season."""
+        if not self.is_production:
+            return
+        if self.ENABLE_DEV_LOGIN:
+            raise RuntimeError(
+                "ENABLE_DEV_LOGIN must be false when ENVIRONMENT=production",
+            )
+        if not self.COOKIE_SECURE:
+            raise RuntimeError(
+                "COOKIE_SECURE must be true when ENVIRONMENT=production",
+            )
+        secret = self.JWT_SECRET_KEY.strip()
+        if not secret or secret == _DEFAULT_JWT_SECRET or len(secret) < 32:
+            raise RuntimeError(
+                "JWT_SECRET_KEY must be a strong secret (>=32 chars) in production",
+            )
 
 
 settings = Settings()
