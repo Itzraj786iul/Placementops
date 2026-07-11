@@ -37,6 +37,8 @@ export const messageResponseSchema = z.object({
 
 export const apiErrorSchema = z.object({
   message: z.string(),
+  error_code: z.string().optional(),
+  request_id: z.string().nullable().optional(),
 });
 
 export type UserSchema = z.infer<typeof userSchema>;

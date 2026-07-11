@@ -10,6 +10,8 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
+from app.core.errors import build_error_body
+from app.core.request_context import get_request_id
 from app.modules.admin.maintenance_state import (
     get_maintenance_state,
     user_bypasses_maintenance,
@@ -76,13 +78,15 @@ class MaintenanceMiddleware(BaseHTTPMiddleware):
 
         return JSONResponse(
             status_code=503,
-            content={
-                "message": state.message,
-                "title": state.title,
-                "maintenance": True,
-                "estimated_completion": state.estimated_completion,
-                "support_contact": state.support_contact,
-            },
+            content=build_error_body(
+                message=state.message,
+                error_code="MAINTENANCE_MODE",
+                request_id=get_request_id(),
+                title=state.title,
+                maintenance=True,
+                estimated_completion=state.estimated_completion,
+                support_contact=state.support_contact,
+            ),
             headers={"Retry-After": "300"},
         )
 

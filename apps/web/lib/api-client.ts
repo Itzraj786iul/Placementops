@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const apiErrorSchema = z.object({
   message: z.string(),
+  error_code: z.string().optional(),
+  request_id: z.string().nullable().optional(),
 });
 
 export class ApiError extends Error {
