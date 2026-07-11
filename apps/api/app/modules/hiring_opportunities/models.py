@@ -59,6 +59,12 @@ class HiringOpportunity(Base):
         ForeignKey("users.id", ondelete="RESTRICT"),
         index=True,
     )
+    season_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("placement_seasons.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

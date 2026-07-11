@@ -14,5 +14,10 @@ def is_super_admin(user: User) -> bool:
     return has_role(user, "SUPER_ADMIN")
 
 
+def ensure_super_admin(user: User) -> None:
+    if not is_super_admin(user):
+        raise AdminForbiddenError("SUPER_ADMIN access required")
+
+
 def target_has_role(target: User, role_name: str) -> bool:
     return any(role.name == role_name for role in target.roles)

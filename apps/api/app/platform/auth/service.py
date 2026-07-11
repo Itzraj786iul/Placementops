@@ -37,6 +37,9 @@ class AuthService:
 
         user = self.user_service.require_active_user(user)
         self.user_service.update_last_login(user)
+        from app.modules.admin.maintenance_service import MaintenanceService
+
+        MaintenanceService.assert_user_may_authenticate(user)
         return user
 
     def authenticate_google_user(self, user_info: dict) -> User:
@@ -74,6 +77,9 @@ class AuthService:
         user = self.user_service.require_active_user(user)
         self._sync_profile_from_provider(user, user_info)
         self.user_service.update_last_login(user)
+        from app.modules.admin.maintenance_service import MaintenanceService
+
+        MaintenanceService.assert_user_may_authenticate(user)
         return user
 
     def create_auth_code(self, user: User) -> str:
@@ -96,6 +102,9 @@ class AuthService:
 
         self.auth_repository.mark_auth_code_used(auth_code)
         self.db.commit()
+        from app.modules.admin.maintenance_service import MaintenanceService
+
+        MaintenanceService.assert_user_may_authenticate(user)
         return self.create_tokens(user)
 
     def create_tokens(self, user: User) -> TokenResponse:

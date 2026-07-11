@@ -47,4 +47,40 @@ export const NAV_ITEMS = [
     icon: "Users",
     roles: ["SUPER_ADMIN", "PLACEMENT_CELL"],
   },
+  {
+    title: "Departments",
+    href: "/workspace/admin/departments",
+    icon: "Building2",
+    roles: ["SUPER_ADMIN", "PLACEMENT_CELL"],
+  },
+  {
+    title: "Seasons",
+    href: "/workspace/admin/seasons",
+    icon: "Briefcase",
+    roles: ["SUPER_ADMIN", "PLACEMENT_CELL"],
+  },
+  {
+    title: "Settings",
+    href: "/workspace/admin/settings",
+    icon: "Settings",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    title: "System Health",
+    href: "/workspace/admin/system-health",
+    icon: "Activity",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    title: "Feature Flags",
+    href: "/workspace/admin/feature-flags",
+    icon: "ToggleLeft",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    title: "Maintenance",
+    href: "/workspace/admin/maintenance",
+    icon: "Wrench",
+    roles: ["SUPER_ADMIN"],
+  },
 ] as const;

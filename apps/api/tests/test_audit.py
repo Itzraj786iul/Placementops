@@ -195,6 +195,10 @@ def test_required_entity_types_and_actions_present() -> None:
         AuditEntityType.SHORTLIST_IMPORT,
         AuditEntityType.EXPORT,
         AuditEntityType.USER,
+        AuditEntityType.DEPARTMENT,
+        AuditEntityType.PLACEMENT_SEASON,
+        AuditEntityType.SYSTEM_SETTING,
+        AuditEntityType.FEATURE_FLAG,
     } == set(AuditEntityType)
     assert AuditAction.SHORTLIST_IMPORTED in AuditAction
     assert AuditAction.EXPORT_GENERATED in AuditAction

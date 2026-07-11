@@ -9,6 +9,10 @@ class AuditEntityType(str, enum.Enum):
     SHORTLIST_IMPORT = "SHORTLIST_IMPORT"
     EXPORT = "EXPORT"
     USER = "USER"
+    DEPARTMENT = "DEPARTMENT"
+    PLACEMENT_SEASON = "PLACEMENT_SEASON"
+    SYSTEM_SETTING = "SYSTEM_SETTING"
+    FEATURE_FLAG = "FEATURE_FLAG"
 
 
 class AuditAction(str, enum.Enum):

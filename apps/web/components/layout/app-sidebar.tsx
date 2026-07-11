@@ -1,12 +1,16 @@
 "use client";
 
 import {
+  Activity,
   Briefcase,
   Building2,
   GraduationCap,
   Menu,
+  Settings,
   Shield,
+  ToggleLeft,
   Users,
+  Wrench,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +31,10 @@ const iconMap = {
   Users,
   Building2,
   Shield,
+  Settings,
+  Activity,
+  ToggleLeft,
+  Wrench,
 } as const;
 
 interface AppSidebarProps {

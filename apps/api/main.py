@@ -6,7 +6,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import api_router
 from app.core.config import settings
-from app.middlewares import RequestLoggingMiddleware
+from app.middlewares import MaintenanceMiddleware, RequestLoggingMiddleware
 from app.platform.exceptions import ApplicationError
 
 
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     application.add_middleware(RequestLoggingMiddleware)
+    application.add_middleware(MaintenanceMiddleware)
     application.include_router(api_router, prefix="/api/v1")
 
     @application.exception_handler(ApplicationError)

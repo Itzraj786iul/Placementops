@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.health import router as health_router
+from app.api.maintenance import router as maintenance_router
 from app.modules.applications.router import applications_router
 from app.modules.audit.router import audit_router
 from app.modules.companies.router import companies_router
@@ -16,6 +17,7 @@ from app.platform.notifications.router import notifications_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
+api_router.include_router(maintenance_router)
 api_router.include_router(auth_router)
 api_router.include_router(roles_router)
 api_router.include_router(admin_router)

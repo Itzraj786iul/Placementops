@@ -25,8 +25,13 @@ class StudentRepository:
         return self.db.get(Department, department_id)
 
     def list_departments(self) -> list[Department]:
-        return list(self.db.scalars(select(Department).order_by(Department.name)).all())
-
+        return list(
+            self.db.scalars(
+                select(Department)
+                .where(Department.status == "active")
+                .order_by(Department.display_order.asc(), Department.name.asc()),
+            ).all(),
+        )
     def get_profile_by_id(self, profile_id: uuid.UUID) -> StudentProfile | None:
         stmt = (
             select(StudentProfile)

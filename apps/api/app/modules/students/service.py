@@ -106,6 +106,10 @@ class StudentService:
         department = self.repository.get_department_by_id(payload.department_id)
         if department is None:
             raise StudentValidationError("Selected department does not exist")
+        if getattr(department, "status", "active") == "archived":
+            raise StudentValidationError(
+                "Archived departments cannot receive new students",
+            )
 
         profile = StudentProfile(
             user_id=user.id,
@@ -172,6 +176,10 @@ class StudentService:
             department = self.repository.get_department_by_id(payload.department_id)
             if department is None:
                 raise StudentValidationError("Selected department does not exist")
+            if getattr(department, "status", "active") == "archived":
+                raise StudentValidationError(
+                    "Archived departments cannot receive new students",
+                )
             profile.department_id = payload.department_id
 
         if payload.graduation_year is not None:

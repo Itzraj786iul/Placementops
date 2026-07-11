@@ -66,6 +66,12 @@ class Application(Base):
         ForeignKey("users.id", ondelete="RESTRICT"),
         index=True,
     )
+    season_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("placement_seasons.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     withdrawn_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
