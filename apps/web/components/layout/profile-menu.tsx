@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, Settings, User } from "lucide-react";
+import { KeyRound, LogOut, User } from "lucide-react";
+import Link from "next/link";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -70,9 +71,11 @@ export function ProfileMenu() {
           <User className="mr-2 h-4 w-4" />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem disabled>
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
+        <DropdownMenuItem asChild>
+          <Link href="/workspace/account/security">
+            <KeyRound className="mr-2 h-4 w-4" />
+            Security
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => void signOut()}>

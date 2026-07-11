@@ -28,6 +28,8 @@ class UserResponse(BaseModel):
     display_name: str
     profile_picture: str | None
     is_active: bool
+    email_verified: bool
+    has_password: bool
     roles: list[RoleResponse]
     primary_role: str | None
     primary_role_label: str
@@ -48,6 +50,8 @@ class UserResponse(BaseModel):
             display_name=user.display_name,
             profile_picture=user.avatar_url,
             is_active=user.status == USER_STATUS_ACTIVE,
+            email_verified=bool(user.email_verified),
+            has_password=bool(user.password_hash),
             roles=[RoleResponse.model_validate(role) for role in user.roles],
             primary_role=primary,
             primary_role_label=role_display_label(primary),

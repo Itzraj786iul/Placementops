@@ -19,6 +19,7 @@ from app.platform.notifications import models as notification_models  # noqa: F4
 from app.platform.auth.models import (  # noqa: F401
     AuthCode,
     AuthIdentity,
+    AuthSecurityToken,
     RefreshToken,
 )
 

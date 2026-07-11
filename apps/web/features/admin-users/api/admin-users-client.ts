@@ -32,6 +32,18 @@ export async function fetchAdminUsers(
   );
 }
 
+export async function inviteAdminUser(payload: {
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+}): Promise<{ id: string; college_email: string }> {
+  return apiRequest(`/admin/users`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchAdminUser(id: string): Promise<AdminUserDetail> {
   return apiRequest<AdminUserDetail>(`/admin/users/${id}`);
 }

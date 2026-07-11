@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.modules.users.models import USER_STATUS_ACTIVE, User
 from app.modules.users.schemas import RoleResponse
@@ -100,6 +100,18 @@ class AdminUserUpdate(BaseModel):
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class AdminUserInvite(BaseModel):
+    email: EmailStr
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    role: Literal[
+        "STUDENT",
+        "PLACEMENT_CONVENER",
+        "PLACEMENT_CELL",
+        "SUPER_ADMIN",
+    ]
 
 
 class AdminRolesUpdate(BaseModel):

@@ -9,6 +9,10 @@ from app.utils.datetime import utc_now
 
 PROVIDER_GOOGLE = "google"
 
+TOKEN_EMAIL_VERIFY = "EMAIL_VERIFY"
+TOKEN_PASSWORD_RESET = "PASSWORD_RESET"
+TOKEN_ACCOUNT_ACTIVATION = "ACCOUNT_ACTIVATION"
+
 
 class AuthIdentity(Base):
     __tablename__ = "auth_identities"
@@ -71,6 +75,34 @@ class AuthCode(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+    )
+
+
+class AuthSecurityToken(Base):
+    """One-time tokens for email verify, password reset, and account activation."""
+
+    __tablename__ = "auth_security_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    purpose: Mapped[str] = mapped_column(String(40), index=True)
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

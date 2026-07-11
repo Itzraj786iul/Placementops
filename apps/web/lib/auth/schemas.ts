@@ -20,6 +20,8 @@ export const userSchema = z.object({
   display_name: z.string(),
   profile_picture: z.string().nullable(),
   is_active: z.boolean(),
+  email_verified: z.boolean(),
+  has_password: z.boolean(),
   roles: z.array(roleSchema),
   primary_role: z
     .enum(["SUPER_ADMIN", "PLACEMENT_CELL", "PLACEMENT_CONVENER", "STUDENT"])

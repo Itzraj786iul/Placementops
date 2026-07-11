@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { AdminFilterSidebar } from "@/features/admin-users/components/admin-filter-sidebar";
+import { InviteUserForm } from "@/features/admin-users/components/invite-user-form";
 import { UserDetailDrawer } from "@/features/admin-users/components/user-detail-drawer";
 import { UsersTable } from "@/features/admin-users/components/users-table";
 import {
@@ -31,6 +32,7 @@ export function AdminUsersWorkspace() {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [bulkRole, setBulkRole] = React.useState("STUDENT");
+  const [inviteOpen, setInviteOpen] = React.useState(false);
 
   const query = useAdminUsers(filters);
   const { bulk } = useAdminUserMutations();
@@ -101,6 +103,11 @@ export function AdminUsersWorkspace() {
           value={filters.search}
           onChange={(e) => setFilter("search", e.target.value)}
         />
+        {isSuperAdmin && (
+          <Button type="button" onClick={() => setInviteOpen((v) => !v)}>
+            Invite user
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"
@@ -110,6 +117,12 @@ export function AdminUsersWorkspace() {
           Refresh
         </Button>
       </header>
+
+      <InviteUserForm
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onInvited={() => void query.refetch()}
+      />
 
       {selectedIds.size > 0 && (
         <div className="bg-muted/40 flex flex-wrap items-center gap-2 border-b px-4 py-2">

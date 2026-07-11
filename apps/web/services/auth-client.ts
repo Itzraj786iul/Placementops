@@ -68,6 +68,96 @@ export async function exchangeAuthCode(code: string): Promise<AuthTokens> {
   return authTokensSchema.parse(data);
 }
 
+export async function passwordLogin(payload: {
+  email: string;
+  password: string;
+  remember_me?: boolean;
+}): Promise<AuthTokens> {
+  const data = await request<unknown>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return authTokensSchema.parse(data);
+}
+
+export async function registerAccount(payload: {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+}): Promise<MessageResponse> {
+  const data = await request<unknown>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return messageResponseSchema.parse(data);
+}
+
+export async function forgotPassword(email: string): Promise<MessageResponse> {
+  const data = await request<unknown>("/auth/password/forgot", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+  return messageResponseSchema.parse(data);
+}
+
+export async function resetPassword(
+  token: string,
+  password: string,
+): Promise<MessageResponse> {
+  const data = await request<unknown>("/auth/password/reset", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+  return messageResponseSchema.parse(data);
+}
+
+export async function verifyEmail(token: string): Promise<MessageResponse> {
+  const data = await request<unknown>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+  return messageResponseSchema.parse(data);
+}
+
+export async function activateAccount(payload: {
+  token: string;
+  password: string;
+  confirm_password: string;
+}): Promise<AuthTokens> {
+  const data = await request<unknown>("/auth/activate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return authTokensSchema.parse(data);
+}
+
+export async function createPassword(
+  password: string,
+  confirmPassword: string,
+): Promise<User> {
+  const data = await request<unknown>("/auth/password", {
+    method: "POST",
+    body: JSON.stringify({
+      password,
+      confirm_password: confirmPassword,
+    }),
+  });
+  return userSchema.parse(data);
+}
+
+export async function changePassword(payload: {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}): Promise<MessageResponse> {
+  const data = await request<unknown>("/auth/password/change", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return messageResponseSchema.parse(data);
+}
+
 export async function devLogin(
   email: string,
   password: string,

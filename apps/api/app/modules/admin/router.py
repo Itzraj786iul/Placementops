@@ -46,12 +46,15 @@ from app.modules.admin.schemas import (
     AdminBulkUpdate,
     AdminRolesUpdate,
     AdminUserDetail,
+    AdminUserInvite,
     AdminUserListResponse,
     AdminUserUpdate,
 )
 from app.modules.admin.service import AdminUserService
 from app.modules.users.models import User
-from app.platform.auth.dependencies import get_current_user
+from app.modules.users.schemas import UserResponse
+from app.platform.auth.dependencies import get_auth_service, get_current_user
+from app.platform.auth.service import AuthService
 
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -241,6 +244,22 @@ def list_admin_users(
         sort_order=sort_order,
         page=page,
         page_size=page_size,
+    )
+
+
+@admin_router.post("/users", response_model=UserResponse, status_code=201)
+def invite_admin_user(
+    payload: AdminUserInvite,
+    current_user: User = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> UserResponse:
+    """Create a staff/student account and email an activation link."""
+    return auth_service.invite_staff_user(
+        actor=current_user,
+        email=payload.email,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        role_name=payload.role,
     )
 
 

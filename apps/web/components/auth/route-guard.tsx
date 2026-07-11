@@ -47,6 +47,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
         !user.needs_welcome &&
         (pathname === "/login" ||
           pathname === "/signup" ||
+          pathname === "/register" ||
           pathname === WELCOME_PATH)
       ) {
         router.replace(getPostAuthPath(user));

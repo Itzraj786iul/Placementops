@@ -33,6 +33,8 @@ export type User = {
   display_name: string;
   profile_picture: string | null;
   is_active: boolean;
+  email_verified: boolean;
+  has_password: boolean;
   roles: Role[];
   primary_role: RoleName | null;
   primary_role_label: string;

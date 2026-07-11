@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Registration is JIT via Google OAuth — keep a single login entry point. */
+/** Unified registration lives at /register (email/password + Google). */
 export default function SignupPage() {
-  redirect("/login");
+  redirect("/register");
 }

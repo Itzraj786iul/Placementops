@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.platform.auth.models import AuthCode, AuthIdentity, RefreshToken
+from app.platform.auth.models import AuthCode, AuthIdentity, AuthSecurityToken, RefreshToken
 from app.utils.datetime import utc_now
 
 
@@ -57,6 +57,48 @@ class AuthRepository:
 
     def mark_auth_code_used(self, auth_code: AuthCode) -> None:
         auth_code.used_at = utc_now()
+
+    def create_security_token(
+        self,
+        *,
+        user_id: uuid.UUID,
+        purpose: str,
+        token_hash: str,
+        expires_at: datetime,
+    ) -> AuthSecurityToken:
+        # Invalidate prior unused tokens for the same purpose.
+        stmt = select(AuthSecurityToken).where(
+            AuthSecurityToken.user_id == user_id,
+            AuthSecurityToken.purpose == purpose,
+            AuthSecurityToken.used_at.is_(None),
+        )
+        for row in self.db.scalars(stmt).all():
+            row.used_at = utc_now()
+
+        token = AuthSecurityToken(
+            user_id=user_id,
+            purpose=purpose,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        self.db.add(token)
+        self.db.flush()
+        return token
+
+    def get_security_token(
+        self,
+        *,
+        token_hash: str,
+        purpose: str,
+    ) -> AuthSecurityToken | None:
+        stmt = select(AuthSecurityToken).where(
+            AuthSecurityToken.token_hash == token_hash,
+            AuthSecurityToken.purpose == purpose,
+        )
+        return self.db.scalars(stmt).first()
+
+    def mark_security_token_used(self, token: AuthSecurityToken) -> None:
+        token.used_at = utc_now()
 
     def create_refresh_token(
         self,

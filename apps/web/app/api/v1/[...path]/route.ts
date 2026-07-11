@@ -7,12 +7,15 @@ const API_URL =
   "http://localhost:8000";
 
 const ACCESS_TOKEN_MAX_AGE = 15 * 60;
-const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60;
+/** Aligns with Remember me (up to 30 days on the API). */
+const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60;
 
 const AUTH_COOKIE_PATHS = new Set([
   "auth/dev/login",
+  "auth/login",
   "auth/exchange",
   "auth/refresh",
+  "auth/activate",
 ]);
 
 function setAuthCookies(

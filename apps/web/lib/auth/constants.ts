@@ -11,6 +11,11 @@ export const PUBLIC_ROUTES = [
   "/",
   "/login",
   "/signup",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/activate",
   "/account-inactive",
 ] as const;
 

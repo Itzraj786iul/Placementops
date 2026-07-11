@@ -13,7 +13,7 @@ export default function LandingPage() {
             <span>PlacementOS</span>
           </div>
           <Button asChild>
-            <Link href="/login">Sign in with Google</Link>
+            <Link href="/login">Sign in</Link>
           </Button>
         </div>
       </header>
@@ -33,12 +33,15 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/login">Continue with Google</Link>
+              <Link href="/login">Sign in</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/register">Create account</Link>
             </Button>
           </div>
           <p className="text-muted-foreground mt-4 text-xs">
-            Official @nitrr.ac.in Google accounts only. New students are
-            registered automatically on first sign-in.
+            @nitrr.ac.in accounts only. Sign in with Google or email and
+            password — same account, same workspace.
           </p>
         </div>
 
@@ -47,7 +50,8 @@ export default function LandingPage() {
             <Shield className="text-primary mx-auto h-8 w-8" />
             <h3 className="mt-4 font-semibold">Secure Access</h3>
             <p className="text-muted-foreground mt-2 text-sm">
-              NITRR institutional Google accounts with role-based permissions.
+              Institutional Google or email/password with role-based
+              permissions.
             </p>
           </div>
           <div className="rounded-lg border p-6 text-center">
