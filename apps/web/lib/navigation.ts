@@ -39,6 +39,12 @@ export const NAV_ITEMS = [
     title: "Admin",
     href: "/workspace/admin",
     icon: "Shield",
-    roles: ["SUPER_ADMIN"],
+    roles: ["SUPER_ADMIN", "PLACEMENT_CELL"],
+  },
+  {
+    title: "Users",
+    href: "/workspace/admin/users",
+    icon: "Users",
+    roles: ["SUPER_ADMIN", "PLACEMENT_CELL"],
   },
 ] as const;

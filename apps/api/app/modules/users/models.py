@@ -9,6 +9,22 @@ from app.utils.datetime import utc_now
 
 USER_STATUS_ACTIVE = "active"
 USER_STATUS_INACTIVE = "inactive"
+USER_STATUS_SUSPENDED = "suspended"
+USER_STATUS_ARCHIVED = "archived"
+
+USER_STATUSES = {
+    USER_STATUS_ACTIVE,
+    USER_STATUS_INACTIVE,
+    USER_STATUS_SUSPENDED,
+    USER_STATUS_ARCHIVED,
+}
+
+# Statuses that block authentication
+LOGIN_BLOCKED_STATUSES = {
+    USER_STATUS_INACTIVE,
+    USER_STATUS_SUSPENDED,
+    USER_STATUS_ARCHIVED,
+}
 
 
 class User(Base):
@@ -82,4 +98,41 @@ class UserRole(Base):
         Uuid,
         ForeignKey("roles.id", ondelete="CASCADE"),
         index=True,
+    )
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
+class UserRoleHistory(Base):
+    """Immutable history of role assign/remove events."""
+
+    __tablename__ = "user_role_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    role_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("roles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    role_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    action: Mapped[str] = mapped_column(String(20), nullable=False)  # ASSIGNED | REMOVED
+    performed_by: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
     )

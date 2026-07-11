@@ -8,6 +8,7 @@ class AuditEntityType(str, enum.Enum):
     STUDENT_PROFILE = "STUDENT_PROFILE"
     SHORTLIST_IMPORT = "SHORTLIST_IMPORT"
     EXPORT = "EXPORT"
+    USER = "USER"
 
 
 class AuditAction(str, enum.Enum):
@@ -22,3 +23,5 @@ class AuditAction(str, enum.Enum):
     EXPORT_GENERATED = "EXPORT_GENERATED"
     SHORTLIST_IMPORTED = "SHORTLIST_IMPORTED"
     VERIFY = "VERIFY"
+    ROLE_ASSIGNED = "ROLE_ASSIGNED"
+    ROLE_REMOVED = "ROLE_REMOVED"

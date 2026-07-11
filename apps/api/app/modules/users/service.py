@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.modules.users.exceptions import ForbiddenError, InvalidEmailDomainError, UserError
-from app.modules.users.models import USER_STATUS_ACTIVE, User
+from app.modules.users.models import USER_STATUS_ACTIVE, LOGIN_BLOCKED_STATUSES, User
 from app.modules.users.repository import DEFAULT_STUDENT_ROLE, UserRepository
 from app.modules.users.schemas import CreateUserData, RoleResponse, UserResponse
 
@@ -30,8 +30,8 @@ class UserService:
     def require_active_user(self, user: User | None) -> User:
         if user is None:
             raise UserError("User account not found", status_code=404)
-        if user.status != USER_STATUS_ACTIVE:
-            raise ForbiddenError("Your account has been deactivated")
+        if user.status in LOGIN_BLOCKED_STATUSES or user.status != USER_STATUS_ACTIVE:
+            raise ForbiddenError("Your account is not allowed to sign in")
         return user
 
     def create_user(self, data: CreateUserData) -> User:

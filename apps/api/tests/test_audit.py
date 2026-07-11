@@ -194,7 +194,10 @@ def test_required_entity_types_and_actions_present() -> None:
         AuditEntityType.STUDENT_PROFILE,
         AuditEntityType.SHORTLIST_IMPORT,
         AuditEntityType.EXPORT,
+        AuditEntityType.USER,
     } == set(AuditEntityType)
     assert AuditAction.SHORTLIST_IMPORTED in AuditAction
     assert AuditAction.EXPORT_GENERATED in AuditAction
     assert AuditAction.STATUS_CHANGED in AuditAction
+    assert AuditAction.ROLE_ASSIGNED in AuditAction
+    assert AuditAction.ROLE_REMOVED in AuditAction

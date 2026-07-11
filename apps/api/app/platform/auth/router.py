@@ -33,12 +33,24 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def _google_oauth_configured() -> bool:
     client_id = (settings.GOOGLE_CLIENT_ID or "").strip()
     client_secret = (settings.GOOGLE_CLIENT_SECRET or "").strip()
-    return bool(
-        client_id
-        and client_secret
-        and "your-google-client" not in client_id
-        and "your-google-client" not in client_secret
+    if not client_id or not client_secret:
+        return False
+    # Reject placeholders and UI-masked values (e.g. ****xxxx from Render).
+    invalid_markers = (
+        "your-google-client",
+        "paste_full_secret",
+        "****",
+        "…",
+        "...",
     )
+    lowered_id = client_id.lower()
+    lowered_secret = client_secret.lower()
+    if any(marker in lowered_id or marker in lowered_secret for marker in invalid_markers):
+        return False
+    # Real Google secrets are typically GOCSPX-... and longer than a few chars.
+    if len(client_secret) < 16:
+        return False
+    return True
 
 
 @router.get("/google/login")
