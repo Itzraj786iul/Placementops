@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 
 from app.modules.students.dependencies import get_student_service
 from app.modules.students.schemas import (
@@ -17,6 +17,7 @@ from app.modules.students.schemas import (
     PersonalInformationCreate,
     PersonalInformationResponse,
     PersonalInformationUpdate,
+    ProfilePhotoUploadResponse,
     ProjectCreate,
     ProjectResponse,
     ProjectUpdate,
@@ -35,6 +36,8 @@ from app.modules.students.schemas import (
 from app.modules.students.service import StudentService
 from app.modules.users.models import User
 from app.platform.auth.dependencies import get_current_user
+from app.platform.storage.types import UploadCategory
+from app.platform.storage.upload_io import read_upload_capped
 
 students_router = APIRouter(prefix="/students", tags=["students"])
 
@@ -120,6 +123,30 @@ def get_personal_information(
     service: StudentService = Depends(get_student_service),
 ) -> PersonalInformationResponse:
     return service.get_personal_information(current_user, profile_id)
+
+
+@students_router.post(
+    "/profiles/{profile_id}/personal-information/photo",
+    response_model=ProfilePhotoUploadResponse,
+)
+async def upload_profile_photo(
+    profile_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service),
+) -> ProfilePhotoUploadResponse:
+    filename, content, content_type = await read_upload_capped(
+        file,
+        UploadCategory.IMAGE,
+    )
+    result = service.upload_profile_photo(
+        current_user,
+        profile_id,
+        filename=filename,
+        content=content,
+        content_type=content_type,
+    )
+    return ProfilePhotoUploadResponse(photo_url=result["photo_url"])
 
 
 @students_router.put(

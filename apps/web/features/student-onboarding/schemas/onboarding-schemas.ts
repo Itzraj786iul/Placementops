@@ -52,7 +52,7 @@ export const personalInfoSchema = z.object({
   city: z.string().min(1, "City is required").max(100),
   state: z.string().min(1, "State is required").max(100),
   country: z.string().min(1, "Country is required").max(100),
-  photo_url: z.string().url("Enter a valid URL").optional().or(z.literal("")),
+  photo_url: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
 export const academicInfoSchema = z.object({

@@ -32,21 +32,22 @@ export function AcademicStep() {
   const form = useForm<AcademicInfoValues>({
     resolver: zodResolver(academicInfoSchema),
     defaultValues: DEFAULT_VALUES,
-    mode: "onChange",
+    mode: "onBlur",
   });
 
   const { register, formState, reset } = form;
+  const hydrated = React.useRef(false);
 
   React.useEffect(() => {
-    if (academic.data) {
-      reset({
-        current_cgpa: Number(academic.data.current_cgpa),
-        semester: academic.data.semester,
-        active_backlogs: academic.data.active_backlogs,
-        total_history_backlogs: academic.data.total_history_backlogs,
-      });
-    }
-  }, [academic.data, reset]);
+    if (!academic.data || hydrated.current || form.formState.isDirty) return;
+    reset({
+      current_cgpa: Number(academic.data.current_cgpa),
+      semester: academic.data.semester,
+      active_backlogs: academic.data.active_backlogs,
+      total_history_backlogs: academic.data.total_history_backlogs,
+    });
+    hydrated.current = true;
+  }, [academic.data, reset, form.formState.isDirty]);
 
   const { status, retrySave } = useStepAutosave(
     form,

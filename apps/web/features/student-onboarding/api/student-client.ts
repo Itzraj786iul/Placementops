@@ -66,6 +66,26 @@ export async function savePersonalInfo(
   );
 }
 
+export async function uploadProfilePhoto(
+  profileId: string,
+  file: File,
+  onProgress: (pct: number) => void = () => undefined,
+): Promise<{ photo_url: string }> {
+  const { uploadWithProgress, parseUploadError } =
+    await import("@/components/ui/file-upload");
+  const form = new FormData();
+  form.append("file", file);
+  const response = await uploadWithProgress(
+    `/api/v1/students/profiles/${profileId}/personal-information/photo`,
+    form,
+    onProgress,
+  );
+  if (!response.ok) {
+    throw new Error(await parseUploadError(response));
+  }
+  return response.json() as Promise<{ photo_url: string }>;
+}
+
 export async function fetchAcademicInfo(
   profileId: string,
 ): Promise<AcademicInformation> {

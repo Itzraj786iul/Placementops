@@ -10,19 +10,32 @@ import {
 import { useAutosave } from "@/features/student-onboarding/hooks/use-autosave";
 import { useInvalidateStudentQueries } from "@/features/student-onboarding/hooks/use-student-data";
 
+/**
+ * Debounced autosave for onboarding steps.
+ * Avoids invalidate+reset loops that freeze inputs while typing.
+ */
 export function useStepAutosave<T extends FieldValues>(
   form: UseFormReturn<T>,
   profileId: string,
   saveFn: (data: T) => Promise<void>,
   enabled: boolean,
 ) {
-  const { invalidateAll } = useInvalidateStudentQueries();
+  const { invalidateProfile } = useInvalidateStudentQueries();
+  const saveFnRef = React.useRef(saveFn);
+  saveFnRef.current = saveFn;
+
   const { status, save, retry } = useAutosave<T>(async (data) => {
-    await saveFn(data);
-    await invalidateAll(profileId);
+    await saveFnRef.current(data);
+    // Clear dirty without clobbering in-progress keystrokes from a refetch.
+    form.reset(data);
+    // Refresh completion % only — do not refetch the active step form data.
+    await invalidateProfile();
   });
+
   const values = useWatch({ control: form.control });
+  const isDirty = form.formState.isDirty;
   const isFirstRender = React.useRef(true);
+  const trigger = form.trigger;
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -30,18 +43,18 @@ export function useStepAutosave<T extends FieldValues>(
       isFirstRender.current = false;
       return;
     }
-    if (!form.formState.isDirty) return;
+    if (!isDirty) return;
 
-    void form.trigger().then((valid) => {
+    void trigger().then((valid) => {
       if (valid) save(values as T);
     });
-  }, [values, enabled, form, save]);
+  }, [values, enabled, isDirty, save, trigger]);
 
   const retrySave = React.useCallback(() => {
-    void form.trigger().then((valid) => {
+    void trigger().then((valid) => {
       if (valid) retry(values as T);
     });
-  }, [form, retry, values]);
+  }, [trigger, retry, values]);
 
   return { status, retrySave };
 }

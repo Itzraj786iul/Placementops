@@ -109,6 +109,10 @@ class PersonalInformationResponse(BaseModel):
     photo_url: str | None
 
 
+class ProfilePhotoUploadResponse(BaseModel):
+    photo_url: str
+
+
 class AcademicInformationCreate(BaseModel):
     current_cgpa: Decimal = Field(ge=0, le=10)
     active_backlogs: int = Field(ge=0)

@@ -254,6 +254,41 @@ class StudentService:
         self.db.commit()
         return PersonalInformationResponse.model_validate(personal)
 
+    def upload_profile_photo(
+        self,
+        user: User,
+        profile_id: uuid.UUID,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str | None,
+    ) -> dict[str, str]:
+        profile = ensure_profile_access(
+            user,
+            self.repository.get_profile_by_id(profile_id),
+        )
+        stored = self.storage.upload(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+            category=UploadCategory.IMAGE,
+            folder=f"placementos/students/{profile_id}/photos",
+        )
+        photo_url = stored.url[:500]
+        existing = self.repository.get_personal_info(profile_id)
+        if existing is not None:
+            old_url = existing.photo_url
+            existing.photo_url = photo_url
+            self.repository.save_personal_info(existing)
+            self._refresh_completion(profile)
+            self.db.commit()
+            if old_url:
+                try:
+                    self.storage.delete(old_url)
+                except Exception:  # noqa: BLE001 — best-effort cleanup
+                    pass
+        return {"photo_url": photo_url}
+
     def get_personal_information(
         self,
         user: User,

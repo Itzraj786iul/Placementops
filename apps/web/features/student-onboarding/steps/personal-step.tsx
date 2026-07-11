@@ -3,7 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
+import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +16,10 @@ import { StepSkeleton } from "@/features/student-onboarding/components/step-skel
 import { useOnboarding } from "@/features/student-onboarding/context/onboarding-context";
 import { useStepAutosave } from "@/features/student-onboarding/hooks/use-step-autosave";
 import { useStudentOnboardingData } from "@/features/student-onboarding/hooks/use-student-data";
-import { savePersonalInfo } from "@/features/student-onboarding/api/student-client";
+import {
+  savePersonalInfo,
+  uploadProfilePhoto,
+} from "@/features/student-onboarding/api/student-client";
 import {
   personalInfoSchema,
   type PersonalInfoValues,
@@ -43,29 +48,36 @@ export function PersonalStep() {
   const form = useForm<PersonalInfoValues>({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: DEFAULT_VALUES,
-    mode: "onChange",
+    mode: "onBlur",
   });
 
-  const { register, formState, reset } = form;
+  const { register, formState, reset, setValue, watch } = form;
+  const photoUrl = watch("photo_url");
+  const hydratedKey = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    if (personal.data) {
-      reset({
-        first_name: personal.data.first_name,
-        last_name: personal.data.last_name,
-        gender: personal.data.gender,
-        date_of_birth: personal.data.date_of_birth,
-        phone_number: personal.data.phone_number,
-        alternate_phone: personal.data.alternate_phone ?? "",
-        personal_email: personal.data.personal_email ?? "",
-        address: personal.data.address,
-        city: personal.data.city,
-        state: personal.data.state,
-        country: personal.data.country,
-        photo_url: personal.data.photo_url ?? "",
-      });
-    }
-  }, [personal.data, reset]);
+    if (!personal.data) return;
+    // Hydrate once per loaded record — never reset while the user is editing.
+    const key = personal.data.student_profile_id;
+    if (hydratedKey.current === key) return;
+    if (form.formState.isDirty) return;
+
+    reset({
+      first_name: personal.data.first_name,
+      last_name: personal.data.last_name,
+      gender: personal.data.gender,
+      date_of_birth: personal.data.date_of_birth,
+      phone_number: personal.data.phone_number,
+      alternate_phone: personal.data.alternate_phone ?? "",
+      personal_email: personal.data.personal_email ?? "",
+      address: personal.data.address,
+      city: personal.data.city,
+      state: personal.data.state,
+      country: personal.data.country,
+      photo_url: personal.data.photo_url ?? "",
+    });
+    hydratedKey.current = key;
+  }, [personal.data, reset, form.formState.isDirty]);
 
   const { status, retrySave } = useStepAutosave(
     form,
@@ -106,17 +118,39 @@ export function PersonalStep() {
       </div>
       <form className="grid gap-4 sm:grid-cols-2">
         <FormField
-          label="Photo URL"
-          htmlFor="photo_url"
-          error={formState.errors.photo_url?.message}
+          label="Profile Photo"
+          htmlFor="photo_upload"
           className="sm:col-span-2"
         >
-          <Input
-            id="photo_url"
-            placeholder="https://..."
-            disabled={isReadOnly}
-            {...register("photo_url")}
-          />
+          <div className="space-y-3">
+            {photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={photoUrl}
+                alt="Profile"
+                className="h-24 w-24 rounded-full border object-cover"
+              />
+            ) : null}
+            {!isReadOnly && (
+              <FileUpload
+                category="image"
+                label="Upload a profile photo"
+                hint="PNG or JPG · max 5 MB"
+                onUpload={async (file, onProgress) => {
+                  const result = await uploadProfilePhoto(
+                    profileId,
+                    file,
+                    onProgress,
+                  );
+                  setValue("photo_url", result.photo_url, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                  toast.success("Photo uploaded");
+                }}
+              />
+            )}
+          </div>
         </FormField>
         <FormField
           label="First Name"
@@ -125,6 +159,7 @@ export function PersonalStep() {
         >
           <Input
             id="first_name"
+            autoComplete="given-name"
             disabled={isReadOnly}
             {...register("first_name")}
           />
@@ -136,6 +171,7 @@ export function PersonalStep() {
         >
           <Input
             id="last_name"
+            autoComplete="family-name"
             disabled={isReadOnly}
             {...register("last_name")}
           />
