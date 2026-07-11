@@ -90,6 +90,13 @@ export async function fetchRoles(): Promise<Role[]> {
   return request<Role[]>("/roles");
 }
 
+export async function completeWelcome(): Promise<User> {
+  const data = await request<unknown>("/auth/welcome/complete", {
+    method: "POST",
+  });
+  return userSchema.parse(data);
+}
+
 export function getGoogleLoginUrl(): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   return `${apiUrl}/api/v1/auth/google/login`;

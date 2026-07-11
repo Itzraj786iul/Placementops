@@ -17,9 +17,16 @@ export const userSchema = z.object({
   personal_email: z.string().email().nullable(),
   first_name: z.string(),
   last_name: z.string(),
+  display_name: z.string(),
   profile_picture: z.string().nullable(),
   is_active: z.boolean(),
   roles: z.array(roleSchema),
+  primary_role: z
+    .enum(["SUPER_ADMIN", "PLACEMENT_CELL", "PLACEMENT_CONVENER", "STUDENT"])
+    .nullable(),
+  primary_role_label: z.string(),
+  workspace_path: z.string().nullable(),
+  needs_welcome: z.boolean(),
   last_login: z.string().nullable(),
   created_at: z.string(),
 });
@@ -29,6 +36,7 @@ export const authTokensSchema = z.object({
   refresh_token: z.string(),
   token_type: z.string(),
   user: userSchema,
+  is_new_user: z.boolean().default(false),
 });
 
 export const messageResponseSchema = z.object({

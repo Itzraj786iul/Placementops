@@ -3,10 +3,15 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.modules.users.exceptions import ForbiddenError, InvalidEmailDomainError, UserError
+from app.modules.users.exceptions import (
+    AccountInactiveError,
+    InvalidEmailDomainError,
+    UserError,
+)
 from app.modules.users.models import USER_STATUS_ACTIVE, LOGIN_BLOCKED_STATUSES, User
 from app.modules.users.repository import DEFAULT_STUDENT_ROLE, UserRepository
 from app.modules.users.schemas import CreateUserData, RoleResponse, UserResponse
+from app.utils.datetime import utc_now
 
 
 class UserService:
@@ -35,7 +40,14 @@ class UserService:
         if user is None:
             raise UserError("User account not found", status_code=404)
         if user.status in LOGIN_BLOCKED_STATUSES or user.status != USER_STATUS_ACTIVE:
-            raise ForbiddenError("Your account is not allowed to sign in")
+            raise AccountInactiveError()
+        return user
+
+    def complete_welcome(self, user: User) -> User:
+        if user.welcome_completed_at is None:
+            user.welcome_completed_at = utc_now()
+            self.db.commit()
+            self.db.refresh(user)
         return user
 
     def create_user(self, data: CreateUserData) -> User:

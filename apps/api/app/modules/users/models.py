@@ -48,6 +48,10 @@ class User(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    welcome_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

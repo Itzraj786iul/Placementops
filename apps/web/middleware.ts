@@ -1,7 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/maintenance"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/signup",
+  "/account-inactive",
+  "/maintenance",
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,7 +23,8 @@ export function middleware(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.includes(pathname);
   const hasToken = request.cookies.has("access_token");
 
-  if (pathname === "/login" && hasToken) {
+  // Sessioned users skip the login page; RouteGuard finishes role redirect.
+  if ((pathname === "/login" || pathname === "/signup") && hasToken) {
     return NextResponse.next();
   }
 

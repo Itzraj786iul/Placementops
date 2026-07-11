@@ -30,9 +30,14 @@ export type User = {
   personal_email: string | null;
   first_name: string;
   last_name: string;
+  display_name: string;
   profile_picture: string | null;
   is_active: boolean;
   roles: Role[];
+  primary_role: RoleName | null;
+  primary_role_label: string;
+  workspace_path: string | null;
+  needs_welcome: boolean;
   last_login: string | null;
   created_at: string;
 };
@@ -42,6 +47,7 @@ export type AuthTokens = {
   refresh_token: string;
   token_type: string;
   user: User;
+  is_new_user: boolean;
 };
 
 export type MessageResponse = {

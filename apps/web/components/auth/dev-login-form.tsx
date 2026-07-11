@@ -7,7 +7,7 @@ import { LoginErrorAlert } from "@/components/auth/login-error-alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getWorkspacePathForUser } from "@/lib/auth/redirects";
+import { getPostAuthPath } from "@/lib/auth/redirects";
 import { AuthApiError, devLogin } from "@/services/auth-client";
 
 type DevLoginFormProps = {
@@ -27,7 +27,10 @@ export function DevLoginForm({ redirectTo }: DevLoginFormProps) {
 
     try {
       const tokens = await devLogin(email.trim(), password);
-      const path = redirectTo ?? getWorkspacePathForUser(tokens.user);
+      const path =
+        redirectTo && !tokens.is_new_user && !tokens.user.needs_welcome
+          ? redirectTo
+          : getPostAuthPath(tokens.user, tokens.is_new_user);
       // Full page navigation ensures auth cookies are loaded before protected routes render.
       window.location.assign(path);
       return;

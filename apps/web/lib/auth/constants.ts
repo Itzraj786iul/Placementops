@@ -7,7 +7,12 @@ export const ROLES = {
   STUDENT: "STUDENT",
 } as const satisfies Record<string, RoleName>;
 
-export const PUBLIC_ROUTES = ["/", "/login", "/signup"] as const;
+export const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/signup",
+  "/account-inactive",
+] as const;
 
 export const AUTH_ROUTES = ["/auth/callback"] as const;
 

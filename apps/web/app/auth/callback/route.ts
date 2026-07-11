@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { getWorkspacePathForUser } from "@/lib/auth/redirects";
+import { getPostAuthPath } from "@/lib/auth/redirects";
 import { authTokensSchema } from "@/lib/auth/schemas";
 
 const API_URL =
@@ -28,13 +28,31 @@ export async function GET(request: NextRequest) {
   });
 
   if (!exchangeResponse.ok) {
+    let message = "Authentication failed. Please try again.";
+    try {
+      const body = (await exchangeResponse.json()) as { message?: string };
+      if (body.message) message = body.message;
+    } catch {
+      // keep default
+    }
+    if (
+      message.toLowerCase().includes("inactive") ||
+      message.toLowerCase().includes("not allowed")
+    ) {
+      return NextResponse.redirect(
+        new URL(
+          `/account-inactive?message=${encodeURIComponent(message)}`,
+          request.url,
+        ),
+      );
+    }
     return NextResponse.redirect(
-      new URL("/login?error=Authentication+failed", request.url),
+      new URL(`/login?error=${encodeURIComponent(message)}`, request.url),
     );
   }
 
   const tokens = authTokensSchema.parse(await exchangeResponse.json());
-  const redirectPath = getWorkspacePathForUser(tokens.user);
+  const redirectPath = getPostAuthPath(tokens.user, tokens.is_new_user);
 
   const response = NextResponse.redirect(new URL(redirectPath, request.url));
   const secure = process.env.NODE_ENV === "production";

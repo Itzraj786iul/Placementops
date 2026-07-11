@@ -7,6 +7,7 @@ from starlette.requests import Request as StarletteRequest
 
 from app.core.config import settings
 from app.dependencies.database import get_db_session
+from app.modules.users.exceptions import AccountInactiveError
 from app.modules.users.models import User
 from app.modules.users.schemas import UserResponse
 from app.platform.auth.cookies import clear_auth_cookies, set_auth_cookies
@@ -84,6 +85,12 @@ async def google_callback(
         auth_code = service.create_auth_code(user)
         redirect_url = f"{settings.FRONTEND_URL}/auth/callback?code={auth_code}"
         return RedirectResponse(url=redirect_url, status_code=302)
+    except AccountInactiveError as exc:
+        inactive_url = (
+            f"{settings.FRONTEND_URL}/account-inactive"
+            f"?message={quote(exc.message)}"
+        )
+        return RedirectResponse(url=inactive_url, status_code=302)
     except ApplicationError as exc:
         error_url = f"{settings.FRONTEND_URL}/login?error={quote(exc.message)}"
         return RedirectResponse(url=error_url, status_code=302)
@@ -112,6 +119,15 @@ def exchange_auth_code(
     tokens = auth_service.exchange_auth_code(payload.code)
     set_auth_cookies(response, tokens)
     return tokens
+
+
+@router.post("/welcome/complete", response_model=UserResponse)
+def complete_welcome(
+    current_user: User = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> UserResponse:
+    """Acknowledge the first-login welcome screen (once)."""
+    return auth_service.complete_welcome(current_user)
 
 
 @router.post("/refresh", response_model=TokenResponse)

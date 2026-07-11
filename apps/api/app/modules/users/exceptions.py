@@ -13,6 +13,16 @@ class ForbiddenError(UserError):
 class InvalidEmailDomainError(UserError):
     def __init__(self) -> None:
         super().__init__(
-            "Only NITRR institutional emails (@nitrr.ac.in or @*.nitrr.ac.in) are permitted",
+            "This Google account is not associated with NIT Raipur.",
             status_code=403,
         )
+
+
+class AccountInactiveError(UserError):
+    def __init__(
+        self,
+        message: str = (
+            "Your account is currently inactive. Please contact the Placement Cell."
+        ),
+    ) -> None:
+        super().__init__(message, status_code=403)

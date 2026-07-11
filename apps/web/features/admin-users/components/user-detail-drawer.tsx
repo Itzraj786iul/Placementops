@@ -132,8 +132,14 @@ export function UserDetailDrawer({ userId, onClose }: UserDetailDrawerProps) {
             </Select>
           </section>
 
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Roles</h3>
+          <section className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Assign Role</h3>
+              <p className="text-muted-foreground text-xs">
+                Staff roles are granted here. Users never self-register as
+                convener or admin. Changes apply on the next login.
+              </p>
+            </div>
             <ul className="space-y-2">
               {data.role_assignments.map((role) => (
                 <li
@@ -142,7 +148,7 @@ export function UserDetailDrawer({ userId, onClose }: UserDetailDrawerProps) {
                 >
                   <span>
                     {role.role_name}
-                    {role.is_primary ? " (primary)" : ""}
+                    {role.is_primary ? " · primary" : ""}
                   </span>
                   <Button
                     type="button"
@@ -166,63 +172,77 @@ export function UserDetailDrawer({ userId, onClose }: UserDetailDrawerProps) {
                       }
                     }}
                   >
-                    Remove
+                    Remove Role
                   </Button>
                 </li>
               ))}
             </ul>
-            <div className="flex gap-2">
-              <Select
-                defaultValue=""
-                disabled={updateRoles.isPending}
-                onChange={async (e) => {
-                  const role = e.target.value;
-                  if (!role) return;
-                  try {
-                    await updateRoles.mutateAsync({
-                      id: data.id,
-                      payload: { assign: [role] },
-                    });
-                    toast.success("Role assigned");
-                    e.target.value = "";
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Failed");
-                  }
-                }}
-              >
-                <option value="">Assign role…</option>
-                {ROLE_OPTIONS.filter(
-                  (r) =>
-                    (r !== "SUPER_ADMIN" || isSuperAdmin) &&
-                    !data.roles.some((x) => x.name === r),
-                ).map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                value={data.primary_role ?? ""}
-                disabled={updateRoles.isPending || data.roles.length === 0}
-                onChange={async (e) => {
-                  try {
-                    await updateRoles.mutateAsync({
-                      id: data.id,
-                      payload: { primary_role: e.target.value || null },
-                    });
-                    toast.success("Primary role updated");
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Failed");
-                  }
-                }}
-              >
-                <option value="">Primary role…</option>
-                {data.roles.map((role) => (
-                  <option key={role.id} value={role.name}>
-                    {role.name}
-                  </option>
-                ))}
-              </Select>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">
+                  Assign Role
+                </label>
+                <Select
+                  defaultValue=""
+                  disabled={updateRoles.isPending}
+                  onChange={async (e) => {
+                    const role = e.target.value;
+                    if (!role) return;
+                    try {
+                      await updateRoles.mutateAsync({
+                        id: data.id,
+                        payload: { assign: [role] },
+                      });
+                      toast.success("Role assigned");
+                      e.target.value = "";
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error ? err.message : "Failed",
+                      );
+                    }
+                  }}
+                >
+                  <option value="">Select role…</option>
+                  {ROLE_OPTIONS.filter(
+                    (r) =>
+                      (r !== "SUPER_ADMIN" || isSuperAdmin) &&
+                      !data.roles.some((x) => x.name === r),
+                  ).map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">
+                  Change Primary Role
+                </label>
+                <Select
+                  value={data.primary_role ?? ""}
+                  disabled={updateRoles.isPending || data.roles.length === 0}
+                  onChange={async (e) => {
+                    try {
+                      await updateRoles.mutateAsync({
+                        id: data.id,
+                        payload: { primary_role: e.target.value || null },
+                      });
+                      toast.success("Primary role updated");
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error ? err.message : "Failed",
+                      );
+                    }
+                  }}
+                >
+                  <option value="">Select primary…</option>
+                  {data.roles.map((role) => (
+                    <option key={role.id} value={role.name}>
+                      {role.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
           </section>
 
@@ -239,7 +259,7 @@ export function UserDetailDrawer({ userId, onClose }: UserDetailDrawerProps) {
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Role history</h3>
+            <h3 className="text-sm font-semibold">View Role History</h3>
             {data.role_history.length === 0 ? (
               <p className="text-muted-foreground text-xs">
                 No role changes yet.

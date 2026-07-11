@@ -4,7 +4,10 @@ import type { RoleName } from "@placementos/types";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import { getWorkspacePathForUser } from "@/lib/auth/redirects";
+import {
+  ACCOUNT_INACTIVE_PATH,
+  getWorkspacePathForUser,
+} from "@/lib/auth/redirects";
 import { hasAnyRole, hasRole } from "@/lib/auth/roles";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -33,7 +36,7 @@ export function ProtectedRoute({
     }
 
     if (roles && roles.length > 0 && !hasAnyRole(user, roles) && user) {
-      router.replace(getWorkspacePathForUser(user));
+      router.replace(getWorkspacePathForUser(user) ?? ACCOUNT_INACTIVE_PATH);
     }
   }, [isLoading, isAuthenticated, user, roles, router, redirectTo]);
 

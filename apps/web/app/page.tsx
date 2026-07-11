@@ -12,35 +12,34 @@ export default function LandingPage() {
             <GraduationCap className="text-primary h-6 w-6" />
             <span>PlacementOS</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline">
-              <Link href="/signup">Sign up</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/login">Sign In</Link>
-            </Button>
-          </div>
+          <Button asChild>
+            <Link href="/login">Sign in with Google</Link>
+          </Button>
         </div>
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          <p className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+            National Institute of Technology, Raipur
+          </p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
             Campus Recruitment Management
           </h1>
           <p className="text-muted-foreground mt-6 text-lg">
-            PlacementOS streamlines placement operations for engineering
-            colleges. Manage drives, track applications, and coordinate between
-            students and recruiters — all in one platform.
+            PlacementOS streamlines placement operations for NIT Raipur. Manage
+            drives, track applications, and coordinate between students and
+            recruiters — all in one platform.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/signup">Get Started</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">Continue with Google</Link>
             </Button>
           </div>
+          <p className="text-muted-foreground mt-4 text-xs">
+            Official @nitrr.ac.in Google accounts only. New students are
+            registered automatically on first sign-in.
+          </p>
         </div>
 
         <div className="mx-auto mt-24 grid max-w-4xl gap-8 sm:grid-cols-3">
@@ -53,9 +52,10 @@ export default function LandingPage() {
           </div>
           <div className="rounded-lg border p-6 text-center">
             <Users className="text-primary mx-auto h-8 w-8" />
-            <h3 className="mt-4 font-semibold">Role-Based Control</h3>
+            <h3 className="mt-4 font-semibold">Role-Based Workspaces</h3>
             <p className="text-muted-foreground mt-2 text-sm">
-              Tailored access for students, placement cell, and administrators.
+              Students, conveners, placement cell, and admins land in the right
+              workspace automatically.
             </p>
           </div>
           <div className="rounded-lg border p-6 text-center">

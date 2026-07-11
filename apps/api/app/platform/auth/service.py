@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.modules.users.models import USER_STATUS_ACTIVE, User
-from app.modules.users.schemas import CreateUserData
+from app.modules.users.schemas import CreateUserData, UserResponse
 from app.modules.users.service import UserService
 from app.platform.auth.exceptions import AuthError, InvalidAuthCodeError, UnauthorizedError
 from app.platform.auth.jwt import create_access_token, create_refresh_token, decode_token
@@ -113,11 +113,17 @@ class AuthService:
         expires_at = utc_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         self.auth_repository.create_refresh_token(user.id, jti, expires_at)
         self.db.commit()
+        needs_welcome = user.welcome_completed_at is None
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             user=self.user_service.to_response(user),
+            is_new_user=needs_welcome,
         )
+
+    def complete_welcome(self, user: User) -> UserResponse:
+        updated = self.user_service.complete_welcome(user)
+        return self.user_service.to_response(updated)
 
     def refresh_session(self, refresh_token: str) -> TokenResponse:
         payload = decode_token(refresh_token, expected_type="refresh")
