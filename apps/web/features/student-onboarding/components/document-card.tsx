@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Loader2, Upload } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, Upload } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,12 @@ const ACCEPT_BY_TYPE: Record<DocumentType, string> = {
   OTHER: ".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg",
 };
 
+const VERIFICATION_COPY: Record<string, string> = {
+  PENDING: "Pending Placement Cell verification",
+  VERIFIED: "Verified by Placement Cell",
+  REJECTED: "Rejected — please re-upload",
+};
+
 type DocumentCardProps = {
   documentType: DocumentType;
   document?: StudentDocument;
@@ -43,7 +49,7 @@ export function DocumentCard({
 }: DocumentCardProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const label = DOCUMENT_TYPE_LABELS[documentType] ?? documentType;
-  const status = document?.status ?? "PENDING";
+  const verificationStatus = document?.status ?? "PENDING";
 
   const openPicker = () => {
     if (isReadOnly || isUploading) return;
@@ -54,19 +60,32 @@ export function DocumentCard({
     <div className="rounded-lg border p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <h4 className="font-medium">{label}</h4>
-            <StatusBadge status={document ? status : "PENDING"} />
-          </div>
+          <h4 className="font-medium">{label}</h4>
           {document ? (
-            <p className="text-muted-foreground text-xs">
-              {document.file_name} ·{" "}
-              {new Date(document.uploaded_at).toLocaleDateString()}
-            </p>
+            <>
+              <p className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                Uploaded successfully
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {document.file_name} ·{" "}
+                {new Date(document.uploaded_at).toLocaleDateString()}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-muted-foreground text-xs">
+                  Verification status
+                </span>
+                <StatusBadge status={verificationStatus} />
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {VERIFICATION_COPY[verificationStatus] ??
+                  "Awaiting Placement Cell review"}
+              </p>
+            </>
           ) : (
             <p className="text-muted-foreground text-sm">Not uploaded yet</p>
           )}
-          {status === "REJECTED" && rejectionNote && (
+          {verificationStatus === "REJECTED" && rejectionNote && (
             <p className="text-destructive text-xs">{rejectionNote}</p>
           )}
         </div>
@@ -91,7 +110,6 @@ export function DocumentCard({
             disabled={isUploading}
             onChange={(event) => {
               const file = event.target.files?.[0];
-              // Allow selecting the same file again after a failed upload.
               event.target.value = "";
               if (file) onFileSelected(file);
             }}

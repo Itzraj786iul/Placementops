@@ -10,34 +10,39 @@ import {
 import { useAutosave } from "@/features/student-onboarding/hooks/use-autosave";
 import { useInvalidateStudentQueries } from "@/features/student-onboarding/hooks/use-student-data";
 
-const VALIDATE_DEBOUNCE_MS = 400;
+/** Single debounce window — useAutosave runs immediately after this. */
+const VALIDATE_DEBOUNCE_MS = 300;
 
 /**
  * Debounced autosave for onboarding steps.
- * Stabilized against render loops that freeze inputs while typing.
+ * Optimistic local form state; serializes API writes; does not block UI on refetch.
  */
 export function useStepAutosave<T extends FieldValues>(
   form: UseFormReturn<T>,
-  _profileId: string,
+  profileId: string,
   saveFn: (data: T) => Promise<void>,
   enabled: boolean,
 ) {
-  const { invalidateProfile } = useInvalidateStudentQueries();
+  const { invalidateAll } = useInvalidateStudentQueries();
   const saveFnRef = React.useRef(saveFn);
   saveFnRef.current = saveFn;
   const formRef = React.useRef(form);
   formRef.current = form;
-  const invalidateRef = React.useRef(invalidateProfile);
-  invalidateRef.current = invalidateProfile;
+  const invalidateRef = React.useRef(invalidateAll);
+  invalidateRef.current = invalidateAll;
+  const profileIdRef = React.useRef(profileId);
+  profileIdRef.current = profileId;
 
   const persist = React.useCallback(async (data: T) => {
     await saveFnRef.current(data);
-    // Keep whatever the user typed during the request; update defaults to saved data.
+    // Keep in-progress edits; mark current values as the saved baseline.
     formRef.current.reset(data, { keepValues: true });
-    await invalidateRef.current();
+    // Refresh completion / stepper in the background — do not delay "Saved".
+    void invalidateRef.current(profileIdRef.current);
   }, []);
 
-  const { status, save, retry } = useAutosave<T>(persist);
+  // Debounce lives in useStepAutosave; pass 0 here to avoid a second delay.
+  const { status, save, retry } = useAutosave<T>(persist, 0);
   const saveRef = React.useRef(save);
   saveRef.current = save;
   const retryRef = React.useRef(retry);
@@ -58,13 +63,11 @@ export function useStepAutosave<T extends FieldValues>(
     const handle = setTimeout(() => {
       void formRef.current.trigger().then((valid) => {
         if (!valid) return;
-        // Always read latest values — effect closure can be stale after await.
         saveRef.current(formRef.current.getValues());
       });
     }, VALIDATE_DEBOUNCE_MS);
 
     return () => clearTimeout(handle);
-    // Intentionally omit save/trigger — refs keep them current without re-firing.
   }, [values, enabled, isDirty]);
 
   const retrySave = React.useCallback(() => {

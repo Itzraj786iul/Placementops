@@ -20,7 +20,17 @@ import {
 } from "@/features/student-onboarding/hooks/use-student-data";
 import { submitMyProfile } from "@/features/student-onboarding/api/student-client";
 import { getIncompleteSections } from "@/features/student-onboarding/utils/step-status";
+import type { VerificationStatus } from "@/features/student-onboarding/types";
 import { ApiError } from "@/lib/api-client";
+
+function sectionVerification(
+  complete: boolean,
+  status: VerificationStatus | null | undefined,
+): VerificationStatus | null {
+  // Only show verification once the section has content to review.
+  if (!complete) return null;
+  return status ?? "PENDING";
+}
 
 export function ReviewStep() {
   const { profile, profileId, isReadOnly, setCurrentStep, completion } =
@@ -34,6 +44,7 @@ export function ReviewStep() {
     return <StepSkeleton />;
   }
 
+  const verification = data.verification.data ?? null;
   const sectionData = {
     personal: data.personal.data ?? null,
     academic: data.academic.data ?? null,
@@ -42,7 +53,7 @@ export function ReviewStep() {
     documents: data.documents.data ?? [],
     skills: data.skills.data ?? [],
     projects: data.projects.data ?? [],
-    verification: data.verification.data ?? null,
+    verification,
   };
 
   const incomplete = getIncompleteSections(sectionData);
@@ -54,6 +65,14 @@ export function ReviewStep() {
     !isReadOnly &&
     (profile.profile_status === "DRAFT" ||
       profile.profile_status === "REJECTED");
+
+  const personalComplete = Boolean(sectionData.personal);
+  const academicComplete = Boolean(sectionData.academic);
+  const educationComplete = sectionData.education.length > 0;
+  const resumeComplete = sectionData.resumes.length > 0;
+  const documentsComplete = incomplete.every((s) => s !== "Documents");
+  const skillsComplete = sectionData.skills.length > 0;
+  const projectsComplete = sectionData.projects.length > 0;
 
   const handleSubmit = async () => {
     setSubmitError(null);
@@ -99,20 +118,21 @@ export function ReviewStep() {
         </div>
       )}
 
-      {profile.profile_status === "REJECTED" &&
-        data.verification.data?.remarks && (
-          <div className="border-destructive/30 bg-destructive/5 mb-6 rounded-lg border p-4 text-sm">
-            <p className="text-destructive font-medium">Reviewer feedback</p>
-            <p className="text-muted-foreground mt-1">
-              {data.verification.data.remarks}
-            </p>
-          </div>
-        )}
+      {profile.profile_status === "REJECTED" && verification?.remarks && (
+        <div className="border-destructive/30 bg-destructive/5 mb-6 rounded-lg border p-4 text-sm">
+          <p className="text-destructive font-medium">Reviewer feedback</p>
+          <p className="text-muted-foreground mt-1">{verification.remarks}</p>
+        </div>
+      )}
 
       <div className="grid gap-4">
         <ReviewCard
           title="Personal Information"
-          complete={Boolean(sectionData.personal)}
+          complete={personalComplete}
+          verificationStatus={sectionVerification(
+            personalComplete,
+            verification?.personal_status,
+          )}
           onEdit={() => setCurrentStep("personal")}
         >
           {sectionData.personal && (
@@ -124,7 +144,11 @@ export function ReviewStep() {
         </ReviewCard>
         <ReviewCard
           title="Academic Information"
-          complete={Boolean(sectionData.academic)}
+          complete={academicComplete}
+          verificationStatus={sectionVerification(
+            academicComplete,
+            verification?.academic_status,
+          )}
           onEdit={() => setCurrentStep("academic")}
         >
           {sectionData.academic && (
@@ -136,7 +160,7 @@ export function ReviewStep() {
         </ReviewCard>
         <ReviewCard
           title="Education History"
-          complete={sectionData.education.length > 0}
+          complete={educationComplete}
           onEdit={() => setCurrentStep("education")}
         >
           <p className="text-muted-foreground text-sm">
@@ -148,7 +172,11 @@ export function ReviewStep() {
         </ReviewCard>
         <ReviewCard
           title="Resume Library"
-          complete={sectionData.resumes.length > 0}
+          complete={resumeComplete}
+          verificationStatus={sectionVerification(
+            resumeComplete,
+            verification?.resume_status,
+          )}
           onEdit={() => setCurrentStep("resume")}
         >
           <p className="text-muted-foreground text-sm">
@@ -157,7 +185,11 @@ export function ReviewStep() {
         </ReviewCard>
         <ReviewCard
           title="Documents"
-          complete={incomplete.every((s) => s !== "Documents")}
+          complete={documentsComplete}
+          verificationStatus={sectionVerification(
+            documentsComplete,
+            verification?.documents_status,
+          )}
           onEdit={() => setCurrentStep("documents")}
         >
           <p className="text-muted-foreground text-sm">
@@ -166,7 +198,7 @@ export function ReviewStep() {
         </ReviewCard>
         <ReviewCard
           title="Skills"
-          complete={sectionData.skills.length > 0}
+          complete={skillsComplete}
           onEdit={() => setCurrentStep("skills")}
         >
           <p className="text-muted-foreground text-sm">
@@ -175,7 +207,7 @@ export function ReviewStep() {
         </ReviewCard>
         <ReviewCard
           title="Projects"
-          complete={sectionData.projects.length > 0}
+          complete={projectsComplete}
           onEdit={() => setCurrentStep("projects")}
         >
           <p className="text-muted-foreground text-sm">
@@ -193,9 +225,14 @@ export function ReviewStep() {
           </p>
         ) : canSubmit ? (
           <div className="space-y-3">
-            <p className="text-muted-foreground text-sm">
-              Your profile is complete. Submit it for placement cell review.
-            </p>
+            <div className="space-y-2 text-sm">
+              <p className="font-medium">Your profile is complete.</p>
+              <p className="text-muted-foreground">
+                After submission, the Placement Cell will review your
+                information and documents. You will be notified once
+                verification is complete.
+              </p>
+            </div>
             <Button
               type="button"
               onClick={handleSubmit}

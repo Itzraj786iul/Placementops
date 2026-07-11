@@ -77,7 +77,8 @@ export default function WelcomePage() {
           <div>
             <dt className="text-muted-foreground">Next step</dt>
             <dd className="mt-1 font-medium">
-              Complete your placement profile.
+              Complete your placement profile once. You&apos;ll use this profile
+              for every placement opportunity.
             </dd>
           </div>
         </dl>
