@@ -13,6 +13,6 @@ class ForbiddenError(UserError):
 class InvalidEmailDomainError(UserError):
     def __init__(self) -> None:
         super().__init__(
-            "Only @nitrr.ac.in email addresses are permitted",
+            "Only NITRR institutional emails (@nitrr.ac.in or @*.nitrr.ac.in) are permitted",
             status_code=403,
         )

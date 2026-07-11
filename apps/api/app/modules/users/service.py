@@ -16,8 +16,12 @@ class UserService:
 
     def validate_college_email(self, email: str) -> str:
         normalized = email.strip().lower()
-        domain = f"@{settings.ALLOWED_EMAIL_DOMAIN}"
-        if not normalized.endswith(domain):
+        allowed = settings.ALLOWED_EMAIL_DOMAIN.strip().lower().lstrip("@")
+        if "@" not in normalized or not allowed:
+            raise InvalidEmailDomainError()
+        domain = normalized.rsplit("@", 1)[1]
+        # Accept @nitrr.ac.in and department subdomains like @mme.nitrr.ac.in
+        if domain != allowed and not domain.endswith(f".{allowed}"):
             raise InvalidEmailDomainError()
         return normalized
 

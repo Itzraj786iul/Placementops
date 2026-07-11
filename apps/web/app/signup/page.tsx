@@ -26,8 +26,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             Create your account
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Sign up with your NITRR Google account (@nitrr.ac.in). New students
-            are registered automatically on first Google sign-in.
+            Sign up with your NITRR Google account (@nitrr.ac.in or
+            @dept.nitrr.ac.in). New students are registered automatically on
+            first Google sign-in.
           </p>
         </div>
 
@@ -36,8 +37,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         <div className="bg-card rounded-lg border p-8 shadow-sm">
           <GoogleSignInButton className="w-full" mode="signup" />
           <p className="text-muted-foreground mt-4 text-center text-xs">
-            Only institutional email addresses ending with @nitrr.ac.in are
-            permitted. Staff roles are assigned by administrators.
+            Only NITRR institutional emails (@nitrr.ac.in or department
+            addresses like @mme.nitrr.ac.in) are permitted. Staff roles are
+            assigned by administrators.
           </p>
         </div>
 

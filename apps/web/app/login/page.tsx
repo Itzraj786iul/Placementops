@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <p className="text-muted-foreground mt-2 text-sm">
             {devLoginEnabled
               ? "Use a dev account below or your NITRR Google account"
-              : "Use your NITRR Google account (@nitrr.ac.in)"}
+              : "Use your NITRR Google account (@nitrr.ac.in or @dept.nitrr.ac.in)"}
           </p>
         </div>
 
@@ -54,8 +54,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <GoogleSignInButton className="w-full" mode="signin" />
           <p className="text-muted-foreground mt-4 text-center text-xs">
-            Only institutional email addresses ending with @nitrr.ac.in are
-            permitted.
+            Only NITRR institutional emails (@nitrr.ac.in or department
+            addresses like @mme.nitrr.ac.in) are permitted.
           </p>
         </div>
 
