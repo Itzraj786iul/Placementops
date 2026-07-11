@@ -32,6 +32,7 @@ class AdminSettingsRepository:
         if row is None:
             row = SystemSetting(key=key, value=value, updated_by=updated_by)
             self.db.add(row)
+            self.db.flush()
         else:
             row.value = value
             row.updated_by = updated_by

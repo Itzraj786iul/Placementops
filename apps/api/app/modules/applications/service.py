@@ -276,10 +276,10 @@ class ApplicationService:
         user: User,
         application_id: uuid.UUID,
     ) -> ApplicationSnapshotResponse:
-        ensure_staff_access(user)
-        application = self.repository.get_by_id(application_id)
-        if application is None:
-            raise ApplicationNotFoundError()
+        application = ensure_application_read_access(
+            user,
+            self.repository.get_by_id(application_id),
+        )
 
         if application.snapshot is None:
             raise ApplicationNotFoundError("Application snapshot not found")

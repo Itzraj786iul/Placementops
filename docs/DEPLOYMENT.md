@@ -242,3 +242,4 @@ Before a live placement season:
 - [ ] Confirm `/docs` and `/openapi.json` return 404
 - [ ] Google OAuth redirect URI matches the live API URL
 - [ ] Cloudinary credentials set (uploads return 503 without them)
+- [ ] Run placement drive E2E: `cd apps/api && python -m pytest tests/e2e -v` (writes `docs/VALIDATION_REPORT.md`)

@@ -47,6 +47,7 @@ class FeatureFlagRepository:
                 updated_by=updated_by,
             )
             self.db.add(row)
+            self.db.flush()
         else:
             row.name = name
             row.description = description

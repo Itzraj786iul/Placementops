@@ -28,6 +28,7 @@ from app.modules.audit.enums import AuditAction, AuditEntityType
 from app.modules.audit.recorder import record_audit
 from app.modules.seasons.models import (
     SEASON_STATUS_ACTIVE,
+    SEASON_STATUS_ARCHIVED,
     SEASON_STATUS_COMPLETED,
     SEASON_STATUS_PLANNING,
     SEASON_STATUSES,
