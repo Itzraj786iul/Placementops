@@ -237,7 +237,7 @@ Free-tier production stack:
 - **Database:** Neon PostgreSQL (free)
 - **File storage:** Cloudinary (free)
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for step-by-step hosting (no Railway required).
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for step-by-step hosting (Vercel + Render + Neon). Staging RC checklist: [docs/STAGING_DEPLOYMENT_REPORT.md](docs/STAGING_DEPLOYMENT_REPORT.md).
 
 ## Troubleshooting
 

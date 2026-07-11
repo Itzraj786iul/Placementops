@@ -1,6 +1,6 @@
 # Deployment Guide (Free Tier)
 
-PlacementOS deploys on **free** managed services. No Railway required.
+PlacementOS deploys on **free** managed services. Railway is not used.
 
 ## Architecture
 
@@ -10,12 +10,20 @@ PlacementOS deploys on **free** managed services. No Railway required.
 | Backend      | [Render](https://render.com)         | Free web service (spins down after ~15 min idle) |
 | Database     | [Neon](https://neon.tech)            | Free Postgres (compute suspends when idle)       |
 | File storage | [Cloudinary](https://cloudinary.com) | Free plan for resumes / documents                |
+| Email        | [Resend](https://resend.com)         | Free tier for transactional mail                 |
 
 **Cold starts:** Render free dynos sleep when idle. The first API request after sleep can take 30–60s. Neon may also wake slowly. Fine for demos; not ideal for a live placement day without upgrading.
 
 **Python version:** The API is pinned to **Python 3.12** (`render.yaml` + `apps/api/.python-version`). Do not use 3.14 on Render — packages like `pydantic-core` / `psycopg2` will compile from source and the build can hang or fail.
 
-**Alternatives (also free-ish):** [Koyeb](https://www.koyeb.com), [Fly.io](https://fly.io) (limited free allowance), [Google Cloud Run](https://cloud.google.com/run) (always-free quota).
+**Health probes**
+
+| Path                 | Purpose                               |
+| -------------------- | ------------------------------------- |
+| `GET /health`        | Liveness (process up; used by Render) |
+| `GET /ready`         | Readiness (Postgres `SELECT 1`)       |
+| `GET /api/v1/health` | Same liveness under API prefix        |
+| `GET /api/v1/ready`  | Same readiness under API prefix       |
 
 ---
 
@@ -33,7 +41,7 @@ cd apps/api
 alembic upgrade head
 ```
 
-Or let the Render start command run migrations (see below).
+Or let the Render start command run migrations (see below). Expected Alembic head: `015_profile_submit_notifications`.
 
 ---
 
@@ -44,7 +52,7 @@ Or let the Render start command run migrations (see below).
 1. Go to [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**.
 2. Connect [Itzraj786iul/Placementops](https://github.com/Itzraj786iul/Placementops).
 3. Render reads `render.yaml` at the repo root.
-4. Fill in the env vars listed in the Blueprint (especially `DATABASE_URL`, `JWT_SECRET_KEY`).
+4. Fill in the env vars listed in the Blueprint (especially `DATABASE_URL`, OAuth, Cloudinary).
 
 ### Option B — Manual Web Service
 
@@ -59,27 +67,39 @@ Or let the Render start command run migrations (see below).
 
 ### Environment variables (Render)
 
-| Variable                | Value / notes                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| `DATABASE_URL`          | Neon connection string                                                         |
-| `ENVIRONMENT`           | `production` (required for RC hardening — disables docs, enforces flags)       |
-| `JWT_SECRET_KEY`        | Long random secret (never use the code default; ≥32 chars)                     |
-| `COOKIE_SECURE`         | `true` (required when `ENVIRONMENT=production`)                                |
-| `ENABLE_DEV_LOGIN`      | `false` (required when `ENVIRONMENT=production`; API will not start otherwise) |
-| `ENABLE_API_DOCS`       | `false` in production (Swagger/ReDoc/OpenAPI disabled)                         |
-| `FRONTEND_URL`          | Your Vercel URL, e.g. `https://placementops.vercel.app`                        |
-| `CORS_ORIGINS`          | Same as `FRONTEND_URL`                                                         |
-| `GOOGLE_CLIENT_ID`      | Google OAuth client ID (if using Google login)                                 |
-| `GOOGLE_CLIENT_SECRET`  | Google OAuth secret                                                            |
-| `GOOGLE_REDIRECT_URI`   | `https://<your-render-service>.onrender.com/api/v1/auth/google/callback`       |
-| `CLOUDINARY_CLOUD_NAME` | Required for file uploads (resumes, documents, images)                         |
-| `CLOUDINARY_API_KEY`    | From Cloudinary dashboard → API Keys                                           |
-| `CLOUDINARY_API_SECRET` | Keep secret; never commit                                                      |
+| Variable                | Value / notes                                                            |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `DATABASE_URL`          | Neon connection string (not localhost)                                   |
+| `ENVIRONMENT`           | `staging` for RC; `production` for go-live                               |
+| `JWT_SECRET_KEY`        | Long random secret (never use the code default; ≥32 chars)               |
+| `COOKIE_SECURE`         | `true` (required for staging/production)                                 |
+| `ENABLE_DEV_LOGIN`      | `false` (required for staging/production; API will not start otherwise)  |
+| `ENABLE_API_DOCS`       | `false` (Swagger/ReDoc/OpenAPI disabled when deployed)                   |
+| `FRONTEND_URL`          | Your Vercel URL, e.g. `https://placementops.vercel.app`                  |
+| `CORS_ORIGINS`          | Must include `FRONTEND_URL`                                              |
+| `GOOGLE_CLIENT_ID`      | Google OAuth client ID                                                   |
+| `GOOGLE_CLIENT_SECRET`  | Google OAuth secret                                                      |
+| `GOOGLE_REDIRECT_URI`   | `https://<your-render-service>.onrender.com/api/v1/auth/google/callback` |
+| `CLOUDINARY_CLOUD_NAME` | Required for file uploads (resumes, documents, images)                   |
+| `CLOUDINARY_API_KEY`    | From Cloudinary dashboard → API Keys                                     |
+| `CLOUDINARY_API_SECRET` | Keep secret; never commit                                                |
+| `RESEND_API_KEY`        | Resend API key (email skipped gracefully if missing)                     |
+| `EMAIL_FROM`            | e.g. `PlacementOS <onboarding@resend.dev>`                               |
+| `EMAIL_PROVIDER`        | `resend`                                                                 |
 
-The API **refuses to start** in production if `ENABLE_DEV_LOGIN=true`, `COOKIE_SECURE=false`, or `JWT_SECRET_KEY` is missing/weak/default.
+The API **refuses to start** in staging/production if security/OAuth/database/CORS requirements fail. Missing Cloudinary/Resend logs startup warnings but does not block boot.
 
-After deploy, open: `https://<service>.onrender.com/health` → should return `{"status":"ok"}`.  
-Confirm `/docs` and `/redoc` return **404** in production.
+After deploy, open:
+
+- `https://<service>.onrender.com/health` → `{"status":"ok"}`
+- `https://<service>.onrender.com/ready` → `{"status":"ready","database":"ok"}`
+- Confirm `/docs` and `/redoc` return **404**
+
+Smoke script:
+
+```bash
+python scripts/staging_smoke.py https://<service>.onrender.com
+```
 
 ---
 
@@ -88,31 +108,23 @@ Confirm `/docs` and `/redoc` return **404** in production.
 1. [vercel.com](https://vercel.com) → **Add New Project** → import `Placementops`.
 2. Configure:
    - **Root Directory:** `apps/web`
-   - **Framework Preset:** Next.js
-   - **Build Command:** `npm run build` (from `apps/web`)  
-     or from monorepo root: `cd ../.. && npm install && npm run build --workspace=@placementos/web`
+   - Framework uses `apps/web/vercel.json` (install + build from monorepo root)
 3. Environment variables:
 
 | Variable                       | Value                                           |
 | ------------------------------ | ----------------------------------------------- |
 | `NEXT_PUBLIC_API_URL`          | `https://<your-render-service>.onrender.com`    |
 | `INTERNAL_API_URL`             | Same Render URL (used by the Next.js BFF proxy) |
-| `NEXT_PUBLIC_ENABLE_DEV_LOGIN` | Leave **unset** / `false` in production         |
+| `NEXT_PUBLIC_ENABLE_DEV_LOGIN` | Leave **unset** / `false` in staging/production |
 
 4. Deploy. Note your Vercel URL, then go back to Render and set `FRONTEND_URL` + `CORS_ORIGINS` to that URL. Redeploy the API if needed.
 
 ### Monorepo tip
 
-If the Vercel build fails resolving `@placementos/types`, set Root Directory to the **repo root** and:
+`apps/web/vercel.json` sets:
 
-- Build Command: `npm install && npm run build --workspace=@placementos/web`
-- Output: Next.js default for `apps/web` (or set “Root Directory” back to `apps/web` after installing from root — Vercel’s monorepo docs also support `apps/web` with install from root via project settings).
-
-Simplest path that usually works:
-
-- Root Directory: `apps/web`
-- Install Command: `cd ../.. && npm install`
-- Build Command: `cd ../.. && npm run build --workspace=@placementos/web`
+- Install: `cd ../.. && npm install`
+- Build: `cd ../.. && npm run build --workspace=@placementos/web`
 
 ---
 
@@ -195,10 +207,12 @@ with an `@nitrr.ac.in` account (personal Gmail will be rejected).
 ## 6. Suggested order
 
 1. Create **Neon** DB → copy `DATABASE_URL`
-2. Deploy **Render** API with env vars → confirm `/health`
+2. Deploy **Render** API with env vars → confirm `/health` and `/ready`
 3. Deploy **Vercel** web with `NEXT_PUBLIC_API_URL` / `INTERNAL_API_URL`
 4. Point Render `FRONTEND_URL` + `CORS_ORIGINS` at Vercel
-5. (Optional) Google OAuth + Cloudinary
+5. Configure Google OAuth + Cloudinary + Resend
+6. Run `python scripts/staging_smoke.py <api-url>`
+7. Run placement drive E2E against staging credentials (see `docs/STAGING_DEPLOYMENT_REPORT.md`)
 
 ---
 
@@ -224,22 +238,26 @@ GitHub Actions (`.github/workflows/ci.yml`) still runs lint, typecheck, build, a
 | Render     | Yes   | Sleeps when idle; slow cold start |
 | Neon       | Yes   | Storage + compute hours; suspends |
 | Cloudinary | Yes   | Transformations / storage quota   |
+| Resend     | Yes   | Daily send quota                  |
 
 For a college demo or small pilot this stack is enough. For a live placement week, upgrade Render (always-on) and Neon compute so the API does not sleep mid-session.
 
 ---
 
-## Production security checklist (RC)
+## Production / staging security checklist (RC)
 
 Before a live placement season:
 
-- [ ] `ENVIRONMENT=production`
+- [ ] `ENVIRONMENT=staging` (RC) or `production` (go-live)
 - [ ] `ENABLE_DEV_LOGIN=false` (API will not start otherwise)
 - [ ] `COOKIE_SECURE=true`
 - [ ] Strong `JWT_SECRET_KEY` (≥32 characters, not the example default)
-- [ ] `ENABLE_API_DOCS=false` (or omit — docs auto-disable in production)
+- [ ] `ENABLE_API_DOCS=false` (or omit — docs auto-disable when deployed)
 - [ ] Frontend: `NEXT_PUBLIC_ENABLE_DEV_LOGIN` unset or `false`
 - [ ] Confirm `/docs` and `/openapi.json` return 404
+- [ ] Confirm `/ready` returns database ok
 - [ ] Google OAuth redirect URI matches the live API URL
 - [ ] Cloudinary credentials set (uploads return 503 without them)
-- [ ] Run placement drive E2E: `cd apps/api && python -m pytest tests/e2e -v` (writes `docs/VALIDATION_REPORT.md`)
+- [ ] Resend configured (or accept SKIPPED email delivery)
+- [ ] `python scripts/staging_smoke.py <api-url>` passes
+- [ ] Run placement drive E2E: `cd apps/api && python -m pytest tests/e2e -v`

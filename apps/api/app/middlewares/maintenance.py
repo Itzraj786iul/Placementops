@@ -23,7 +23,9 @@ WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # Always allow these path prefixes (after /api/v1 or absolute)
 ALWAYS_ALLOW_PREFIXES = (
     "/health",
+    "/ready",
     "/api/v1/health",
+    "/api/v1/ready",
     "/api/v1/auth/google/callback",
     "/api/v1/auth/google/login",
     "/api/v1/maintenance",

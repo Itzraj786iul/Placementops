@@ -167,6 +167,32 @@ def create_app() -> FastAPI:
     async def root_health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @application.get("/ready", response_model=None)
+    async def root_ready() -> JSONResponse:
+        from sqlalchemy import text
+
+        from app.database.session import SessionLocal
+
+        try:
+            db = SessionLocal()
+            try:
+                db.execute(text("SELECT 1"))
+            finally:
+                db.close()
+            return JSONResponse(
+                status_code=200,
+                content={"status": "ready", "database": "ok"},
+            )
+        except Exception as exc:  # noqa: BLE001
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "not_ready",
+                    "database": "error",
+                    "detail": type(exc).__name__,
+                },
+            )
+
     return application
 
 

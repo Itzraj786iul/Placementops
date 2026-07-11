@@ -27,15 +27,7 @@ def _database_host() -> str:
 
 
 def _google_oauth_ready() -> bool:
-    client_id = settings.GOOGLE_CLIENT_ID.strip()
-    client_secret = settings.GOOGLE_CLIENT_SECRET.strip()
-    if not client_id or not client_secret:
-        return False
-    if "your-" in client_id.lower() or "your-" in client_secret.lower():
-        return False
-    if "****" in client_id or "****" in client_secret:
-        return False
-    return len(client_secret) >= 16
+    return settings.google_oauth_configured
 
 
 def _probe_database() -> dict[str, Any]:
@@ -90,6 +82,16 @@ def _feature_flag_snapshot() -> dict[str, Any]:
 
 def log_startup_diagnostics() -> None:
     maintenance = get_maintenance_state()
+    warnings: list[str] = []
+    if settings.is_deployed and not settings.cloudinary_configured:
+        warnings.append(
+            "Cloudinary is not configured — multipart uploads will return 503",
+        )
+    if settings.is_deployed and not settings.email_configured:
+        warnings.append(
+            "Resend is not configured — email delivery will be SKIPPED",
+        )
+
     payload: dict[str, Any] = {
         "event": "startup.diagnostics",
         "environment": settings.ENVIRONMENT,
@@ -115,5 +117,13 @@ def log_startup_diagnostics() -> None:
             "enabled": maintenance.enabled,
             "title": maintenance.title if maintenance.enabled else None,
         },
+        "warnings": warnings,
     }
     log_json(logger, logging.INFO, **payload)
+    for warning in warnings:
+        log_json(
+            logger,
+            logging.WARNING,
+            event="startup.warning",
+            message=warning,
+        )

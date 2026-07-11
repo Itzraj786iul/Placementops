@@ -1,8 +1,10 @@
-# Free-tier Blueprint for PlacementOS API (Render)
+# Staging Blueprint for PlacementOS API (Render)
 # https://render.com/docs/blueprint-spec
 #
 # Dashboard → New → Blueprint → connect this repo.
 # Pin Python 3.12 so wheels install quickly (avoid 3.14 source builds).
+#
+# For go-live, set ENVIRONMENT=production (same security gates apply to staging).
 
 services:
   - type: web
@@ -22,7 +24,7 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT
-        value: "production"
+        value: "staging"
       - key: ENABLE_API_DOCS
         value: "false"
       - key: COOKIE_SECURE
