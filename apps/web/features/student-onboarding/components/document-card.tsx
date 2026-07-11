@@ -1,6 +1,7 @@
 "use client";
 
-import { ExternalLink, Upload } from "lucide-react";
+import { ExternalLink, Loader2, Upload } from "lucide-react";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/features/student-onboarding/components/status-badge";
@@ -10,12 +11,26 @@ import type {
   StudentDocument,
 } from "@/features/student-onboarding/types";
 
+const ACCEPT_BY_TYPE: Record<DocumentType, string> = {
+  PHOTO: ".png,.jpg,.jpeg,image/png,image/jpeg",
+  AADHAR: ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg",
+  PAN: ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg",
+  TENTH_MARKSHEET: ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg",
+  TWELFTH_MARKSHEET:
+    ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg",
+  SEMESTER_MARKSHEET:
+    ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg",
+  RESUME: ".pdf,.doc,.docx,application/pdf",
+  OTHER: ".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg",
+};
+
 type DocumentCardProps = {
   documentType: DocumentType;
   document?: StudentDocument;
   isReadOnly: boolean;
   rejectionNote?: string | null;
-  onUpload: () => void;
+  isUploading?: boolean;
+  onFileSelected: (file: File) => void;
 };
 
 export function DocumentCard({
@@ -23,10 +38,17 @@ export function DocumentCard({
   document,
   isReadOnly,
   rejectionNote,
-  onUpload,
+  isUploading = false,
+  onFileSelected,
 }: DocumentCardProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const label = DOCUMENT_TYPE_LABELS[documentType] ?? documentType;
   const status = document?.status ?? "PENDING";
+
+  const openPicker = () => {
+    if (isReadOnly || isUploading) return;
+    inputRef.current?.click();
+  };
 
   return (
     <div className="rounded-lg border p-4">
@@ -60,16 +82,36 @@ export function DocumentCard({
         )}
       </div>
       {!isReadOnly && (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="mt-4"
-          onClick={onUpload}
-        >
-          <Upload className="h-3.5 w-3.5" />
-          {document ? "Replace" : "Upload"}
-        </Button>
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            className="sr-only"
+            accept={ACCEPT_BY_TYPE[documentType]}
+            disabled={isUploading}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              // Allow selecting the same file again after a failed upload.
+              event.target.value = "";
+              if (file) onFileSelected(file);
+            }}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-4"
+            disabled={isUploading}
+            onClick={openPicker}
+          >
+            {isUploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
+            {isUploading ? "Uploading…" : document ? "Replace" : "Upload"}
+          </Button>
+        </>
       )}
     </div>
   );

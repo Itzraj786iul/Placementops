@@ -3,7 +3,6 @@ from app.modules.students.models import StudentProfile
 from app.modules.students.schemas import PROFILE_COMPLETION_WEIGHTS
 
 REQUIRED_DOCUMENT_TYPES = {
-    DocumentType.PHOTO,
     DocumentType.AADHAR,
     DocumentType.TENTH_MARKSHEET,
     DocumentType.TWELFTH_MARKSHEET,

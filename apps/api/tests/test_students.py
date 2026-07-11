@@ -97,7 +97,6 @@ def test_profile_completion_weights() -> None:
             status="PENDING",
         )
         for doc_type in [
-            DocumentType.PHOTO,
             DocumentType.AADHAR,
             DocumentType.TENTH_MARKSHEET,
             DocumentType.TWELFTH_MARKSHEET,

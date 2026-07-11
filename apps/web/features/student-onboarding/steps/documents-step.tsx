@@ -3,14 +3,10 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import { FileUpload } from "@/components/ui/file-upload";
 import { DocumentCard } from "@/features/student-onboarding/components/document-card";
 import { SectionCard } from "@/features/student-onboarding/components/section-card";
 import { StepSkeleton } from "@/features/student-onboarding/components/step-skeleton";
-import {
-  DOCUMENT_TYPE_LABELS,
-  REQUIRED_DOCUMENT_TYPES,
-} from "@/features/student-onboarding/constants";
+import { DOCUMENT_STEP_TYPES } from "@/features/student-onboarding/constants";
 import { useOnboarding } from "@/features/student-onboarding/context/onboarding-context";
 import {
   useInvalidateStudentQueries,
@@ -19,18 +15,13 @@ import {
 import { uploadDocument } from "@/features/student-onboarding/api/student-client";
 import type { DocumentType } from "@/features/student-onboarding/types";
 
-const ALL_DOC_TYPES = Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[];
-
 export function DocumentsStep() {
   const { profileId, isReadOnly } = useOnboarding();
   const { documents, verification } = useStudentOnboardingData(profileId);
   const { invalidateAll } = useInvalidateStudentQueries();
-  const [uploadType, setUploadType] = React.useState<DocumentType | null>(null);
-
-  const refresh = async () => {
-    await invalidateAll(profileId);
-    setUploadType(null);
-  };
+  const [uploadingType, setUploadingType] = React.useState<DocumentType | null>(
+    null,
+  );
 
   if (documents.isLoading) return <StepSkeleton />;
 
@@ -39,23 +30,29 @@ export function DocumentsStep() {
       ? verification.data.remarks
       : null;
 
-  const displayTypes = [
-    ...REQUIRED_DOCUMENT_TYPES,
-    ...ALL_DOC_TYPES.filter(
-      (t) =>
-        !REQUIRED_DOCUMENT_TYPES.includes(
-          t as (typeof REQUIRED_DOCUMENT_TYPES)[number],
-        ),
-    ),
-  ];
+  const handleFileSelected = async (type: DocumentType, file: File) => {
+    setUploadingType(type);
+    try {
+      await uploadDocument(profileId, file, {
+        document_type: type,
+        file_name: file.name,
+      });
+      toast.success("Document uploaded");
+      await invalidateAll(profileId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setUploadingType(null);
+    }
+  };
 
   return (
     <SectionCard
       title="Documents"
-      description="Upload required verification documents (PDF/DOC/images)."
+      description="Upload Aadhar and marksheets. Profile photo is collected in Personal Information."
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        {displayTypes.map((type) => {
+        {DOCUMENT_STEP_TYPES.map((type) => {
           const doc = documents.data?.find((d) => d.document_type === type);
           return (
             <DocumentCard
@@ -64,39 +61,17 @@ export function DocumentsStep() {
               document={doc}
               isReadOnly={isReadOnly}
               rejectionNote={rejectionNote}
-              onUpload={() => setUploadType(type)}
+              isUploading={uploadingType === type}
+              onFileSelected={(file) => {
+                void handleFileSelected(type, file);
+              }}
             />
           );
         })}
       </div>
-      {uploadType && !isReadOnly && (
-        <div className="mt-6 space-y-3 rounded-lg border p-4">
-          <p className="text-sm font-medium">
-            Upload {DOCUMENT_TYPE_LABELS[uploadType]}
-          </p>
-          <FileUpload
-            category={uploadType === "PHOTO" ? "image" : "document"}
-            hint={
-              uploadType === "PHOTO"
-                ? "PNG, JPG · max 5 MB"
-                : "PDF, DOC, DOCX, PNG, JPG · max 10 MB"
-            }
-            onUpload={async (file, onProgress) => {
-              await uploadDocument(
-                profileId,
-                file,
-                {
-                  document_type: uploadType,
-                  file_name: file.name,
-                },
-                onProgress,
-              );
-              toast.success("Document uploaded");
-              await refresh();
-            }}
-          />
-        </div>
-      )}
+      <p className="text-muted-foreground mt-4 text-xs">
+        Required: Aadhar, 10th marksheet, and 12th marksheet.
+      </p>
     </SectionCard>
   );
 }

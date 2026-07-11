@@ -30,10 +30,19 @@ export const ONBOARDING_EDUCATION_TYPES = [
 export const NITRR_INSTITUTION_NAME = "National Institute of Technology Raipur";
 
 export const REQUIRED_DOCUMENT_TYPES = [
-  "PHOTO",
   "AADHAR",
   "TENTH_MARKSHEET",
   "TWELFTH_MARKSHEET",
+] as const;
+
+/** Shown on the Documents step. Photo lives in Personal Information; resumes have their own step. */
+export const DOCUMENT_STEP_TYPES = [
+  "AADHAR",
+  "PAN",
+  "TENTH_MARKSHEET",
+  "TWELFTH_MARKSHEET",
+  "SEMESTER_MARKSHEET",
+  "OTHER",
 ] as const;
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
