@@ -44,7 +44,7 @@ function defaultInstitution(type: EducationType): string {
 export function EducationStep() {
   const { profileId, isReadOnly } = useOnboarding();
   const { education } = useStudentOnboardingData(profileId);
-  const { invalidateAll } = useInvalidateStudentQueries();
+  const { invalidateSections } = useInvalidateStudentQueries();
   const [editingType, setEditingType] = React.useState<EducationType | null>(
     null,
   );
@@ -55,6 +55,8 @@ export function EducationStep() {
     <SectionCard
       title="Education History"
       description="Add your 10th, 12th, and undergraduate details."
+      focusId="education-section"
+      status={(education.data?.length ?? 0) > 0 ? "complete" : "not_started"}
     >
       <div className="grid gap-4">
         {ONBOARDING_EDUCATION_TYPES.map((type) => {
@@ -70,7 +72,7 @@ export function EducationStep() {
               onCancel={() => setEditingType(null)}
               onSaved={async () => {
                 setEditingType(null);
-                await invalidateAll(profileId);
+                invalidateSections(profileId, ["education"]);
               }}
             />
           );
@@ -178,6 +180,7 @@ function EducationTypeCard({
           <input type="hidden" {...form.register("education_type")} />
           <FormField
             label={type === "UNDERGRADUATE" ? "Institute" : "Institution"}
+            required
             error={form.formState.errors.institution?.message}
           >
             <Input {...form.register("institution")} />
@@ -185,6 +188,7 @@ function EducationTypeCard({
           {showBoard ? (
             <FormField
               label="Board"
+              required
               error={form.formState.errors.board?.message}
             >
               <Input
@@ -195,12 +199,14 @@ function EducationTypeCard({
           ) : null}
           <FormField
             label="Passing Year"
+            required
             error={form.formState.errors.passing_year?.message}
           >
             <Input type="number" {...form.register("passing_year")} />
           </FormField>
           <FormField
             label={type === "UNDERGRADUATE" ? "CGPA" : "Percentage / CGPA"}
+            required
             error={form.formState.errors.percentage_or_cgpa?.message}
           >
             <Input {...form.register("percentage_or_cgpa")} />

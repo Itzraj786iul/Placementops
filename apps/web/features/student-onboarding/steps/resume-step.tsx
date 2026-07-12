@@ -26,7 +26,7 @@ import {
 export function ResumeStep() {
   const { profileId, isReadOnly } = useOnboarding();
   const { resumes } = useStudentOnboardingData(profileId);
-  const { invalidateAll } = useInvalidateStudentQueries();
+  const { invalidateSections } = useInvalidateStudentQueries();
   const [showUpload, setShowUpload] = React.useState(false);
   const [name, setName] = React.useState("");
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
@@ -34,8 +34,8 @@ export function ResumeStep() {
   const [replacingId, setReplacingId] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
-    await invalidateAll(profileId);
-  }, [invalidateAll, profileId]);
+    invalidateSections(profileId, ["resumes"]);
+  }, [invalidateSections, profileId]);
 
   const handleActivate = async (resumeId: string) => {
     const all = resumes.data ?? [];
@@ -66,6 +66,8 @@ export function ResumeStep() {
     <SectionCard
       title="Resume Library"
       description="Upload PDF or Word resumes and mark one as active."
+      focusId="resume-section"
+      status={(resumes.data?.length ?? 0) > 0 ? "complete" : "not_started"}
     >
       {!resumes.data?.length && !showUpload ? (
         <EmptyState
@@ -158,7 +160,7 @@ export function ResumeStep() {
       {!isReadOnly && (showUpload || (resumes.data?.length ?? 0) > 0) && (
         <div className="mt-6 space-y-3 rounded-lg border border-dashed p-4">
           <p className="text-sm font-medium">Add resume</p>
-          <FormField label="Resume Name (optional)">
+          <FormField label="Resume Name" required={false}>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}

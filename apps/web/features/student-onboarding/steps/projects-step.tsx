@@ -32,12 +32,12 @@ import { nullifyEmpty } from "@/features/student-onboarding/utils/payload-helper
 export function ProjectsStep() {
   const { profileId, isReadOnly } = useOnboarding();
   const { projects } = useStudentOnboardingData(profileId);
-  const { invalidateAll } = useInvalidateStudentQueries();
+  const { invalidateSections } = useInvalidateStudentQueries();
   const [editing, setEditing] = React.useState<Project | null>(null);
   const [showForm, setShowForm] = React.useState(false);
 
   const refresh = async () => {
-    await invalidateAll(profileId);
+    invalidateSections(profileId, ["projects"]);
     setEditing(null);
     setShowForm(false);
   };
@@ -45,7 +45,12 @@ export function ProjectsStep() {
   if (projects.isLoading) return <StepSkeleton />;
 
   return (
-    <SectionCard title="Projects" description="Showcase your best work.">
+    <SectionCard
+      title="Projects"
+      description="Showcase your best work."
+      focusId="projects-section"
+      status={(projects.data?.length ?? 0) > 0 ? "complete" : "not_started"}
+    >
       {!projects.data?.length && !showForm ? (
         <EmptyState
           title="No projects yet"
@@ -154,6 +159,7 @@ function ProjectForm({
     >
       <FormField
         label="Title"
+        required
         error={form.formState.errors.title?.message}
         className="sm:col-span-2"
       >
@@ -161,6 +167,7 @@ function ProjectForm({
       </FormField>
       <FormField
         label="Description"
+        required
         error={form.formState.errors.description?.message}
         className="sm:col-span-2"
       >
@@ -168,6 +175,7 @@ function ProjectForm({
       </FormField>
       <FormField
         label="Technology Stack"
+        required
         error={form.formState.errors.tech_stack?.message}
         className="sm:col-span-2"
       >
@@ -178,6 +186,7 @@ function ProjectForm({
       </FormField>
       <FormField
         label="GitHub URL"
+        required={false}
         error={form.formState.errors.github_url?.message}
       >
         <Input
@@ -187,6 +196,7 @@ function ProjectForm({
       </FormField>
       <FormField
         label="Live Demo URL"
+        required={false}
         error={form.formState.errors.demo_url?.message}
       >
         <Input {...form.register("demo_url")} placeholder="https://..." />

@@ -18,7 +18,7 @@ import type {
   Verification,
 } from "@/features/student-onboarding/types";
 
-type SectionData = {
+export type SectionData = {
   personal?: PersonalInformation | null;
   academic?: AcademicInformation | null;
   education: EducationRecord[];
@@ -72,12 +72,34 @@ const COMPLETION_CHECKS: Record<
   review: () => false,
 };
 
+const STARTED_CHECKS: Record<OnboardingStepId, (data: SectionData) => boolean> =
+  {
+    personal: (data) => Boolean(data.personal),
+    academic: (data) => Boolean(data.academic),
+    education: (data) => data.education.length > 0,
+    resume: (data) => data.resumes.length > 0,
+    documents: (data) => data.documents.length > 0,
+    skills: (data) => data.skills.length > 0,
+    projects: (data) => data.projects.length > 0,
+    review: () => false,
+  };
+
 const REJECTION_MAP: Partial<Record<OnboardingStepId, keyof Verification>> = {
   personal: "personal_status",
   academic: "academic_status",
   resume: "resume_status",
   documents: "documents_status",
 };
+
+export function getSectionStatus(
+  stepId: OnboardingStepId,
+  data: SectionData,
+): "complete" | "incomplete" | "not_started" {
+  if (stepId === "review") return "not_started";
+  if (COMPLETION_CHECKS[stepId](data)) return "complete";
+  if (STARTED_CHECKS[stepId](data)) return "incomplete";
+  return "not_started";
+}
 
 export function getFirstIncompleteStep(data: SectionData): OnboardingStepId {
   for (const step of ONBOARDING_STEPS) {
@@ -95,20 +117,23 @@ export function buildStepperItems(
 
   return ONBOARDING_STEPS.map((step) => {
     let state: StepState = "current";
+    const sectionStatus = getSectionStatus(step.id, data);
 
     const rejectionField = REJECTION_MAP[step.id];
     if (rejectionField && data.verification?.[rejectionField] === "REJECTED") {
       state = "rejected";
     } else if (step.id === currentStep) {
-      state = "current";
-    } else if (COMPLETION_CHECKS[step.id](data)) {
+      state = sectionStatus === "complete" ? "completed" : "current";
+    } else if (sectionStatus === "complete") {
       state = "completed";
     } else if (
       step.order > ONBOARDING_STEPS.find((s) => s.id === firstIncomplete)!.order
     ) {
       state = "locked";
+    } else if (sectionStatus === "incomplete") {
+      state = "incomplete";
     } else {
-      state = "current";
+      state = "not_started";
     }
 
     return { id: step.id, label: step.label, state };
@@ -119,4 +144,13 @@ export function getIncompleteSections(data: SectionData): string[] {
   return ONBOARDING_STEPS.filter(
     (step) => step.id !== "review" && !COMPLETION_CHECKS[step.id](data),
   ).map((step) => step.label);
+}
+
+export function missingForStep(
+  stepId: OnboardingStepId,
+  missing: { code: string; label: string; step: string }[],
+): string[] {
+  return missing
+    .filter((item) => item.step === stepId)
+    .map((item) => item.label);
 }

@@ -3,7 +3,10 @@
 import * as React from "react";
 
 import type { OnboardingStepId } from "@/features/student-onboarding/constants";
-import type { StudentProfile } from "@/features/student-onboarding/types";
+import type {
+  MissingRequirement,
+  StudentProfile,
+} from "@/features/student-onboarding/types";
 
 type OnboardingContextValue = {
   profile: StudentProfile;
@@ -12,11 +15,25 @@ type OnboardingContextValue = {
   currentStep: OnboardingStepId;
   setCurrentStep: (step: OnboardingStepId) => void;
   completion: number;
+  focusTarget: string | null;
+  navigateToRequirement: (item: MissingRequirement) => void;
+  clearFocusTarget: () => void;
 };
 
 const OnboardingContext = React.createContext<OnboardingContextValue | null>(
   null,
 );
+
+const VALID_STEPS = new Set<OnboardingStepId>([
+  "personal",
+  "academic",
+  "education",
+  "resume",
+  "documents",
+  "skills",
+  "projects",
+  "review",
+]);
 
 export function OnboardingProvider({
   profile,
@@ -33,6 +50,22 @@ export function OnboardingProvider({
   completion: number;
   children: React.ReactNode;
 }) {
+  const [focusTarget, setFocusTarget] = React.useState<string | null>(null);
+
+  const clearFocusTarget = React.useCallback(() => {
+    setFocusTarget(null);
+  }, []);
+
+  const navigateToRequirement = React.useCallback(
+    (item: MissingRequirement) => {
+      const step = item.step as OnboardingStepId;
+      if (!VALID_STEPS.has(step) || step === "review") return;
+      setFocusTarget(item.focus ?? null);
+      setCurrentStep(step);
+    },
+    [setCurrentStep],
+  );
+
   const value = React.useMemo(
     () => ({
       profile,
@@ -41,8 +74,20 @@ export function OnboardingProvider({
       currentStep,
       setCurrentStep,
       completion,
+      focusTarget,
+      navigateToRequirement,
+      clearFocusTarget,
     }),
-    [profile, isReadOnly, currentStep, setCurrentStep, completion],
+    [
+      profile,
+      isReadOnly,
+      currentStep,
+      setCurrentStep,
+      completion,
+      focusTarget,
+      navigateToRequirement,
+      clearFocusTarget,
+    ],
   );
 
   return (

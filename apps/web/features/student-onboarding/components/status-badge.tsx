@@ -16,6 +16,15 @@ const STATUS_STYLES: Record<string, string> = {
     "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending Verification",
+  VERIFIED: "Verified",
+  REJECTED: "Rejected",
+  DRAFT: "Draft",
+  SUBMITTED: "Submitted",
+  UNDER_REVIEW: "Under Review",
+};
+
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <Badge
@@ -26,7 +35,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         className,
       )}
     >
-      {status.replace(/_/g, " ")}
+      {STATUS_LABELS[status] ?? status.replace(/_/g, " ")}
     </Badge>
   );
 }

@@ -26,6 +26,14 @@ export type Department = {
   code: string;
 };
 
+export type MissingRequirement = {
+  code: string;
+  label: string;
+  step: string;
+  focus?: string | null;
+  estimated_minutes?: number;
+};
+
 export type StudentProfile = {
   id: string;
   user_id: string;
@@ -35,6 +43,13 @@ export type StudentProfile = {
   graduation_year: number;
   profile_status: ProfileStatus;
   profile_completion: number;
+  missing_requirements?: MissingRequirement[];
+  requirements_completed?: number;
+  requirements_total?: number;
+  optional_completed?: number;
+  optional_total?: number;
+  optional_missing?: MissingRequirement[];
+  estimated_minutes_remaining?: number;
   created_at: string;
   updated_at: string;
   department?: Department | null;

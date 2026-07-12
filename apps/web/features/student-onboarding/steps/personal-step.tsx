@@ -96,6 +96,7 @@ export function PersonalStep() {
     profileId,
     savePersonal,
     !isReadOnly,
+    ["personal"],
   );
 
   if (personal.isLoading) return <StepSkeleton />;
@@ -117,6 +118,8 @@ export function PersonalStep() {
     <SectionCard
       title="Personal Information"
       description="Your contact details and identity information."
+      focusId="personal-section"
+      status={personal.data ? "complete" : "not_started"}
     >
       <div className="mb-6 flex justify-end">
         <AutosaveIndicator status={status} onRetry={retrySave} />
@@ -125,9 +128,10 @@ export function PersonalStep() {
         <FormField
           label="Profile Photo"
           htmlFor="photo_upload"
+          required={false}
           className="sm:col-span-2"
         >
-          <div className="space-y-3">
+          <div className="space-y-3" data-completion-focus="photo_upload">
             {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -160,6 +164,7 @@ export function PersonalStep() {
         <FormField
           label="First Name"
           htmlFor="first_name"
+          required
           error={formState.errors.first_name?.message}
         >
           <Input
@@ -172,6 +177,7 @@ export function PersonalStep() {
         <FormField
           label="Last Name"
           htmlFor="last_name"
+          required
           error={formState.errors.last_name?.message}
         >
           <Input
@@ -184,6 +190,7 @@ export function PersonalStep() {
         <FormField
           label="Gender"
           htmlFor="gender"
+          required
           error={formState.errors.gender?.message}
         >
           <Select id="gender" disabled={isReadOnly} {...register("gender")}>
@@ -195,6 +202,7 @@ export function PersonalStep() {
         <FormField
           label="Date of Birth"
           htmlFor="date_of_birth"
+          required
           error={formState.errors.date_of_birth?.message}
         >
           <Input
@@ -207,6 +215,7 @@ export function PersonalStep() {
         <FormField
           label="Phone"
           htmlFor="phone_number"
+          required
           error={formState.errors.phone_number?.message}
         >
           <Input
@@ -215,9 +224,14 @@ export function PersonalStep() {
             {...register("phone_number")}
           />
         </FormField>
-        <FormField label="Alternate Phone" htmlFor="alternate_phone">
+        <FormField
+          label="Alternate Phone"
+          htmlFor="alternate_phone"
+          required={false}
+        >
           <Input
             id="alternate_phone"
+            data-completion-focus="alternate_phone"
             disabled={isReadOnly}
             {...register("alternate_phone")}
           />
@@ -225,11 +239,13 @@ export function PersonalStep() {
         <FormField
           label="Personal Email"
           htmlFor="personal_email"
+          required={false}
           error={formState.errors.personal_email?.message}
         >
           <Input
             id="personal_email"
             type="email"
+            data-completion-focus="personal_email"
             disabled={isReadOnly}
             {...register("personal_email")}
           />
@@ -237,6 +253,7 @@ export function PersonalStep() {
         <FormField
           label="Address"
           htmlFor="address"
+          required
           error={formState.errors.address?.message}
           className="sm:col-span-2"
         >
@@ -249,6 +266,7 @@ export function PersonalStep() {
         <FormField
           label="City"
           htmlFor="city"
+          required
           error={formState.errors.city?.message}
         >
           <Input id="city" disabled={isReadOnly} {...register("city")} />
@@ -256,6 +274,7 @@ export function PersonalStep() {
         <FormField
           label="State"
           htmlFor="state"
+          required
           error={formState.errors.state?.message}
         >
           <Input id="state" disabled={isReadOnly} {...register("state")} />
@@ -263,6 +282,7 @@ export function PersonalStep() {
         <FormField
           label="Country"
           htmlFor="country"
+          required
           error={formState.errors.country?.message}
         >
           <Input id="country" disabled={isReadOnly} {...register("country")} />

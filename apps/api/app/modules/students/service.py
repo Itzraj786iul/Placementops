@@ -4,7 +4,10 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.modules.students.access import ensure_profile_access, ensure_staff_access, is_staff_user
-from app.modules.students.completion import calculate_profile_completion
+from app.modules.students.completion import (
+    calculate_profile_completion,
+    get_profile_completion_guide,
+)
 from app.modules.students.enums import ProfileStatus
 from app.modules.students.enums import DocumentType
 from app.modules.students.exceptions import (
@@ -958,4 +961,8 @@ class StudentService:
     def _profile_response(self, profile: StudentProfile | None) -> StudentProfileResponse:
         if profile is None:
             raise StudentNotFoundError()
-        return StudentProfileResponse.model_validate(profile)
+        # Reload with section relationships so missing_requirements is accurate.
+        loaded = self.repository.get_profile_by_id(profile.id) or profile
+        response = StudentProfileResponse.model_validate(loaded)
+        guide = get_profile_completion_guide(loaded)
+        return response.model_copy(update=guide)

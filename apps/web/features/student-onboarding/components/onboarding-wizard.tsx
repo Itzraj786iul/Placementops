@@ -19,6 +19,7 @@ import {
   OnboardingProvider,
   useOnboarding,
 } from "@/features/student-onboarding/context/onboarding-context";
+import { useCompletionFocus } from "@/features/student-onboarding/hooks/use-completion-focus";
 import {
   useStudentOnboardingData,
   useStudentProfile,
@@ -101,7 +102,8 @@ function OnboardingLayout({
   currentStep: OnboardingStepId;
   setCurrentStep: (step: OnboardingStepId) => void;
 }) {
-  const { profileId, completion } = useOnboarding();
+  const { profileId } = useOnboarding();
+  useCompletionFocus();
   const data = useStudentOnboardingData(profileId);
 
   const sectionData = React.useMemo(
@@ -134,7 +136,7 @@ function OnboardingLayout({
 
   return (
     <div className="space-y-8">
-      <OnboardingHeader completion={completion} />
+      <OnboardingHeader />
       <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
         <aside className="lg:sticky lg:top-6 lg:self-start">
           <OnboardingStepper

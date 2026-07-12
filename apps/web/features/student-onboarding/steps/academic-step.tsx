@@ -66,6 +66,7 @@ export function AcademicStep() {
     profileId,
     saveAcademic,
     !isReadOnly,
+    ["academic"],
   );
 
   if (academic.isLoading) return <StepSkeleton />;
@@ -87,6 +88,8 @@ export function AcademicStep() {
     <SectionCard
       title="Academic Information"
       description="Your current academic standing at the institute."
+      focusId="academic-section"
+      status={academic.data ? "complete" : "not_started"}
     >
       <div className="mb-6 flex justify-end">
         <AutosaveIndicator status={status} onRetry={retrySave} />
@@ -95,6 +98,7 @@ export function AcademicStep() {
         <FormField
           label="Current CGPA"
           htmlFor="current_cgpa"
+          required
           error={formState.errors.current_cgpa?.message}
         >
           <Input
@@ -110,6 +114,7 @@ export function AcademicStep() {
         <FormField
           label="Semester"
           htmlFor="semester"
+          required
           error={formState.errors.semester?.message}
         >
           <Input
@@ -124,6 +129,7 @@ export function AcademicStep() {
         <FormField
           label="Active Backlogs"
           htmlFor="active_backlogs"
+          required
           error={formState.errors.active_backlogs?.message}
         >
           <Input
@@ -137,6 +143,7 @@ export function AcademicStep() {
         <FormField
           label="History of Backlogs"
           htmlFor="total_history_backlogs"
+          required
           error={formState.errors.total_history_backlogs?.message}
         >
           <Input

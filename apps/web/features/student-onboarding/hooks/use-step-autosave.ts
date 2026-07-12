@@ -8,7 +8,10 @@ import {
 } from "react-hook-form";
 
 import { useAutosave } from "@/features/student-onboarding/hooks/use-autosave";
-import { useInvalidateStudentQueries } from "@/features/student-onboarding/hooks/use-student-data";
+import {
+  type StudentSectionKey,
+  useInvalidateStudentQueries,
+} from "@/features/student-onboarding/hooks/use-student-data";
 
 /** Single debounce window — useAutosave runs immediately after this. */
 const VALIDATE_DEBOUNCE_MS = 300;
@@ -22,23 +25,26 @@ export function useStepAutosave<T extends FieldValues>(
   profileId: string,
   saveFn: (data: T) => Promise<void>,
   enabled: boolean,
+  sections: StudentSectionKey[] = [],
 ) {
-  const { invalidateAll } = useInvalidateStudentQueries();
+  const { invalidateSections } = useInvalidateStudentQueries();
   const saveFnRef = React.useRef(saveFn);
   saveFnRef.current = saveFn;
   const formRef = React.useRef(form);
   formRef.current = form;
-  const invalidateRef = React.useRef(invalidateAll);
-  invalidateRef.current = invalidateAll;
+  const invalidateRef = React.useRef(invalidateSections);
+  invalidateRef.current = invalidateSections;
   const profileIdRef = React.useRef(profileId);
   profileIdRef.current = profileId;
+  const sectionsRef = React.useRef(sections);
+  sectionsRef.current = sections;
 
   const persist = React.useCallback(async (data: T) => {
     await saveFnRef.current(data);
     // Keep in-progress edits; mark current values as the saved baseline.
     formRef.current.reset(data, { keepValues: true });
-    // Refresh completion / stepper in the background — do not delay "Saved".
-    void invalidateRef.current(profileIdRef.current);
+    // Refresh completion + this section only — do not delay "Saved".
+    invalidateRef.current(profileIdRef.current, sectionsRef.current);
   }, []);
 
   // Debounce lives in useStepAutosave; pass 0 here to avoid a second delay.

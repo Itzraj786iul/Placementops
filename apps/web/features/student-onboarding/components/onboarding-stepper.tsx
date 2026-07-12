@@ -1,11 +1,17 @@
 "use client";
 
-import { Check, Lock } from "lucide-react";
+import { AlertTriangle, Check, Lock } from "lucide-react";
 
 import type { OnboardingStepId } from "@/features/student-onboarding/constants";
 import { cn } from "@/lib/utils";
 
-export type StepState = "completed" | "current" | "locked" | "rejected";
+export type StepState =
+  | "completed"
+  | "current"
+  | "locked"
+  | "rejected"
+  | "incomplete"
+  | "not_started";
 
 export type StepperItem = {
   id: OnboardingStepId;
@@ -18,6 +24,15 @@ type OnboardingStepperProps = {
   currentStep: OnboardingStepId;
   onStepSelect: (step: OnboardingStepId) => void;
 };
+
+function statusLabel(state: StepState): string {
+  if (state === "completed") return "Complete";
+  if (state === "rejected") return "Needs attention";
+  if (state === "incomplete") return "Incomplete";
+  if (state === "not_started") return "Not Started";
+  if (state === "locked") return "Locked";
+  return "In progress";
+}
 
 export function OnboardingStepper({
   steps,
@@ -40,9 +55,15 @@ export function OnboardingStepper({
               isClickable && step.id !== currentStep && "hover:bg-muted/60",
               !isClickable && "cursor-not-allowed opacity-50",
             )}
+            aria-current={step.id === currentStep ? "step" : undefined}
           >
             <StepIcon state={step.state} index={index + 1} />
-            <span className="font-medium">{step.label}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">{step.label}</span>
+              <span className="text-muted-foreground block text-xs">
+                {statusLabel(step.state)}
+              </span>
+            </span>
           </button>
         );
       })}
@@ -65,10 +86,10 @@ function StepIcon({ state, index }: { state: StepState; index: number }) {
       </span>
     );
   }
-  if (state === "rejected") {
+  if (state === "rejected" || state === "incomplete") {
     return (
-      <span className="bg-destructive text-destructive-foreground flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold">
-        !
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white">
+        <AlertTriangle className="h-3 w-3" />
       </span>
     );
   }

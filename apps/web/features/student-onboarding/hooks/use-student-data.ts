@@ -16,6 +16,16 @@ import {
 } from "@/features/student-onboarding/api/student-client";
 import { ApiError } from "@/lib/api-client";
 
+export type StudentSectionKey =
+  | "personal"
+  | "academic"
+  | "education"
+  | "resumes"
+  | "documents"
+  | "skills"
+  | "projects"
+  | "verification";
+
 export const studentQueryKeys = {
   profile: ["student", "profile"] as const,
   departments: ["student", "departments"] as const,
@@ -27,6 +37,20 @@ export const studentQueryKeys = {
   skills: (id: string) => ["student", "skills", id] as const,
   projects: (id: string) => ["student", "projects", id] as const,
   verification: (id: string) => ["student", "verification", id] as const,
+};
+
+const SECTION_KEY_FN: Record<
+  StudentSectionKey,
+  (id: string) => readonly unknown[]
+> = {
+  personal: studentQueryKeys.personal,
+  academic: studentQueryKeys.academic,
+  education: studentQueryKeys.education,
+  resumes: studentQueryKeys.resumes,
+  documents: studentQueryKeys.documents,
+  skills: studentQueryKeys.skills,
+  projects: studentQueryKeys.projects,
+  verification: studentQueryKeys.verification,
 };
 
 export function useStudentProfile() {
@@ -110,34 +134,29 @@ export function useInvalidateStudentQueries() {
   return {
     invalidateProfile: () =>
       queryClient.invalidateQueries({ queryKey: studentQueryKeys.profile }),
+    /** Refresh completion + one or more section caches only. */
+    invalidateSections: (profileId: string, sections: StudentSectionKey[]) => {
+      void queryClient.invalidateQueries({
+        queryKey: studentQueryKeys.profile,
+      });
+      for (const section of sections) {
+        void queryClient.invalidateQueries({
+          queryKey: SECTION_KEY_FN[section](profileId),
+        });
+      }
+    },
+    /** @deprecated Prefer invalidateSections for targeted refreshes. */
     invalidateAll: (profileId: string) => {
       void queryClient.invalidateQueries({
         queryKey: studentQueryKeys.profile,
       });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.personal(profileId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.academic(profileId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.education(profileId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.resumes(profileId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.documents(profileId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.skills(profileId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.projects(profileId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: studentQueryKeys.verification(profileId),
-      });
+      for (const section of Object.keys(
+        SECTION_KEY_FN,
+      ) as StudentSectionKey[]) {
+        void queryClient.invalidateQueries({
+          queryKey: SECTION_KEY_FN[section](profileId),
+        });
+      }
     },
   };
 }

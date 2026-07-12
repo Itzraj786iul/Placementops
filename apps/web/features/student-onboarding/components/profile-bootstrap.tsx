@@ -57,6 +57,7 @@ export function ProfileBootstrap({ onCreated }: { onCreated: () => void }) {
       <form onSubmit={onSubmit} className="grid max-w-lg gap-4">
         <FormField
           label="Department"
+          required
           error={form.formState.errors.department_id?.message}
         >
           <Select {...form.register("department_id")}>
@@ -70,18 +71,21 @@ export function ProfileBootstrap({ onCreated }: { onCreated: () => void }) {
         </FormField>
         <FormField
           label="Roll Number"
+          required
           error={form.formState.errors.roll_number?.message}
         >
           <Input {...form.register("roll_number")} />
         </FormField>
         <FormField
           label="Registration Number"
+          required
           error={form.formState.errors.registration_number?.message}
         >
           <Input {...form.register("registration_number")} />
         </FormField>
         <FormField
           label="Graduation Year"
+          required
           error={form.formState.errors.graduation_year?.message}
         >
           <Input type="number" {...form.register("graduation_year")} />

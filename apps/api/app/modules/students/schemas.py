@@ -25,6 +25,14 @@ PROFILE_COMPLETION_WEIGHTS = {
 }
 
 
+class MissingRequirementItem(BaseModel):
+    code: str
+    label: str
+    step: str
+    focus: str | None = None
+    estimated_minutes: int = 1
+
+
 class DepartmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,6 +75,13 @@ class StudentProfileResponse(BaseModel):
     graduation_year: int
     profile_status: ProfileStatus
     profile_completion: int
+    missing_requirements: list[MissingRequirementItem] = Field(default_factory=list)
+    requirements_completed: int = 0
+    requirements_total: int = 0
+    optional_completed: int = 0
+    optional_total: int = 0
+    optional_missing: list[MissingRequirementItem] = Field(default_factory=list)
+    estimated_minutes_remaining: int = 0
     created_at: datetime
     updated_at: datetime
     department: DepartmentResponse | None = None

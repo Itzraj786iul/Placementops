@@ -30,12 +30,16 @@ const VERIFICATION_COPY: Record<string, string> = {
   REJECTED: "Rejected — please re-upload",
 };
 
+export type DocumentUploadPhase = "idle" | "uploading" | "processing";
+
 type DocumentCardProps = {
   documentType: DocumentType;
   document?: StudentDocument;
   isReadOnly: boolean;
   rejectionNote?: string | null;
-  isUploading?: boolean;
+  uploadPhase?: DocumentUploadPhase;
+  uploadProgress?: number;
+  required?: boolean;
   onFileSelected: (file: File) => void;
 };
 
@@ -44,24 +48,70 @@ export function DocumentCard({
   document,
   isReadOnly,
   rejectionNote,
-  isUploading = false,
+  uploadPhase = "idle",
+  uploadProgress = 0,
+  required = false,
   onFileSelected,
 }: DocumentCardProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const label = DOCUMENT_TYPE_LABELS[documentType] ?? documentType;
   const verificationStatus = document?.status ?? "PENDING";
+  const isBusy = uploadPhase !== "idle";
 
   const openPicker = () => {
-    if (isReadOnly || isUploading) return;
+    if (isReadOnly || isBusy) return;
     inputRef.current?.click();
   };
 
   return (
-    <div className="rounded-lg border p-4">
+    <div
+      className="rounded-lg border p-4"
+      data-completion-focus={`document-${documentType}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2">
-          <h4 className="font-medium">{label}</h4>
-          {document ? (
+          <h4 className="font-medium">
+            {label}
+            {required ? (
+              <span className="text-destructive ml-1" aria-hidden>
+                *
+              </span>
+            ) : (
+              <span className="text-muted-foreground ml-2 text-xs font-normal">
+                Optional
+              </span>
+            )}
+          </h4>
+          {isBusy ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {uploadPhase === "uploading"
+                  ? `Uploading… ${uploadProgress}%`
+                  : "Processing upload…"}
+              </p>
+              <div
+                className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
+                role="progressbar"
+                aria-valuenow={
+                  uploadPhase === "uploading" ? uploadProgress : 100
+                }
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="bg-primary h-full transition-[width] duration-150"
+                  style={{
+                    width: `${
+                      uploadPhase === "uploading"
+                        ? Math.max(uploadProgress, 4)
+                        : 100
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+          ) : document ? (
             <>
               <p className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
@@ -73,7 +123,7 @@ export function DocumentCard({
               </p>
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <span className="text-muted-foreground text-xs">
-                  Verification status
+                  Verification
                 </span>
                 <StatusBadge status={verificationStatus} />
               </div>
@@ -85,11 +135,11 @@ export function DocumentCard({
           ) : (
             <p className="text-muted-foreground text-sm">Not uploaded yet</p>
           )}
-          {verificationStatus === "REJECTED" && rejectionNote && (
+          {verificationStatus === "REJECTED" && rejectionNote && !isBusy && (
             <p className="text-destructive text-xs">{rejectionNote}</p>
           )}
         </div>
-        {document && (
+        {document && !isBusy && (
           <a
             href={document.file_url}
             target="_blank"
@@ -107,7 +157,7 @@ export function DocumentCard({
             type="file"
             className="sr-only"
             accept={ACCEPT_BY_TYPE[documentType]}
-            disabled={isUploading}
+            disabled={isBusy}
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
@@ -119,15 +169,21 @@ export function DocumentCard({
             size="sm"
             variant="outline"
             className="mt-4"
-            disabled={isUploading}
+            disabled={isBusy}
             onClick={openPicker}
           >
-            {isUploading ? (
+            {isBusy ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Upload className="h-3.5 w-3.5" />
             )}
-            {isUploading ? "Uploading…" : document ? "Replace" : "Upload"}
+            {uploadPhase === "uploading"
+              ? "Uploading…"
+              : uploadPhase === "processing"
+                ? "Processing…"
+                : document
+                  ? "Replace"
+                  : "Upload"}
           </Button>
         </>
       )}

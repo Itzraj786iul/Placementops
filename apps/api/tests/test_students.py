@@ -6,7 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.modules.students.completion import calculate_profile_completion
+from app.modules.students.completion import (
+    calculate_profile_completion,
+    get_profile_requirements,
+)
 from app.modules.students.enums import DocumentType, Gender, ProfileStatus, EducationType
 from app.modules.students.exceptions import StudentValidationError
 from app.modules.students.models import (
@@ -127,6 +130,41 @@ def test_profile_completion_weights() -> None:
     ]
 
     assert calculate_profile_completion(profile) == 100
+    missing, completed, total = get_profile_requirements(profile)
+    assert missing == []
+    assert completed == total
+    assert total == 10
+
+
+def test_missing_requirements_lists_gaps() -> None:
+    department = Department(id=uuid.uuid4(), name="CSE", code="CSE")
+    profile = StudentProfile(
+        id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        department_id=department.id,
+        department=department,
+        roll_number="ROLL001",
+        registration_number="REG001",
+        graduation_year=2026,
+        profile_status=ProfileStatus.DRAFT,
+        profile_completion=0,
+    )
+    profile.personal_information = None
+    profile.academic_information = None
+    profile.education_history = []
+    profile.resumes = []
+    profile.documents = []
+    profile.skills = []
+    profile.projects = []
+
+    missing, completed, total = get_profile_requirements(profile)
+    assert completed == 1  # institute details only
+    assert total == 10
+    codes = {item["code"] for item in missing}
+    assert "PERSONAL" in codes
+    assert "RESUME" in codes
+    assert "AADHAR" in codes
+    assert "PROJECT" in codes
 
 
 def _student_actor(user_id: uuid.UUID | None = None) -> SimpleNamespace:
